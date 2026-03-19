@@ -56,9 +56,9 @@ plt.style.use('dark_background')
 
 Ethoxide = Props_obj('N2O','ETHANOL','N2O','ETHANOL')
 
-Pintle = Injector_obj(0.65,0.55,0.65,30,20,20,2.533e-3,1.240e-3,0.480e-3,Ethoxide)
+Pintle = Injector_obj(0.65,0.55,0.65,25,20,20,2.533e-3,1.240e-3,0.480e-3,Ethoxide)
 
-mdotcoolinput = 0.81
+mdotcoolinput = 1.81
 
 
 
@@ -198,7 +198,7 @@ def R(z):
     return R
 
 
-Altair = Regen_obj(1.5e-3,1e-3,1.5e-3,R,Rthroat,0.0254,90,Ethoxide.fuel,110,15e-6,80,Le)
+Altair = Regen_obj(1.5e-3,1e-3,1.5e-3,R,Rthroat,0.0254,90,Ethoxide.fuel,237,15e-6,80,Le)
 
 ######################################
 
@@ -844,18 +844,23 @@ regen_results = {
     'Twall_3d':      Twall_3d.tolist(),
     'Qflux_3d':      Qflux_3d.tolist(),
     'transport_3d': transport_3d,
-    'tempsC_3d': tempsC_3d
+    'tempsC_3d': tempsC_3d,
+    'nozzle_R': [float(R(zi)) for zi in Altair.z_array]
 }
 
 # Inject data into dashboard and write self-contained HTML
-with open('catnap_dashboard.html', 'r') as f:
+
+with open('catnap_dashboard.html', 'r', encoding='utf-8') as f:
     html = f.read()
 
 inject = '<script>var AUTOLOAD = ' + json.dumps(regen_results) + ';</script>'
 html = html.replace('</head>', inject + '\n</head>')
 
+
+
 output_path = os.path.abspath('catnap_results.html')
-with open(output_path, 'w') as f:
+
+with open(output_path, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print(f'Dashboard exported to {output_path}')
