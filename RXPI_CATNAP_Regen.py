@@ -306,7 +306,9 @@ def RectStress(z,twall,Q,Rwall):
 
 
 class Regen_obj:
-    def __init__(self, twall, lfmin, wcmin,R, Rthroat, throat_radcurv, numchannels, coolant, k_chamber, epsilon_rough,numpts_z,enginelength):
+    def __init__(self, twall, lfmin, wcmin,R, Rthroat, throat_radcurv, numchannels, coolant, k_chamber, epsilon_rough,numpts_z,enginelength,genangle):
+
+        self.genrad = (genangle)*pi/180
         
         self.twall = twall
         self.R = R #function R(z)
@@ -319,7 +321,7 @@ class Regen_obj:
         self.numpts_z = numpts_z
         self.channelheight, self.channelwidth, self.trib = RegenGeom(lfmin,wcmin,Rthroat,numchannels,twall,R)
         self.z_array = np.linspace(0,enginelength,numpts_z)
-        self.dz = enginelength/numpts_z
+        self.dz = (enginelength/numpts_z)/np.cos(self.genrad)
 
     
 

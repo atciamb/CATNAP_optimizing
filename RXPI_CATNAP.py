@@ -198,7 +198,7 @@ def R(z):
     return R
 
 
-Altair = Regen_obj(1.5e-3,1e-3,1.5e-3,R,Rthroat,0.0254,90,Ethoxide.fuel,237,15e-6,80,Le)
+Altair = Regen_obj(1.5e-3,1e-3,1.5e-3,R,Rthroat,0.0254,90,Ethoxide.fuel,237,15e-6,80,Le,35)
 
 ######################################
 
