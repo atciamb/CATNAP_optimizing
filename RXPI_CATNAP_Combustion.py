@@ -359,12 +359,16 @@ class Transport_obj:
         self.Props_obj = Props_obj
 
         self.Pc = SolvePC(self.mdot_total,self.MR,self.Athroat,self.Pc_init,self.Props_obj)
+        self._cache = {} #cache for mch interpolator
 
-    def Tcomb(self):
-        Tcomb = self.Props_obj.C.get_Tcomb(self.Pc,self.MR)
+    # def Tcomb(self):
+    #     Tcomb = self.Props_obj.C.get_Tcomb(self.Pc,self.MR)
 
-        return Tcomb
-
+    #     return Tcomb
+    def Tcomb(self): # all this cached version does is avoid repeated calls by checking if value is already stored
+        if 'Tcomb' not in self._cache:
+            self._cache['Tcomb'] = self.Props_obj.C.get_Tcomb(self.Pc, self.MR)
+        return self._cache['Tcomb']
 
     def Combustionperformance(self,Pamb):
         
@@ -372,54 +376,71 @@ class Transport_obj:
         
         return Cf,Thrust,Isp,cstar
     
+    # def getCstar(self):
+        
+    #     MR = self.MR
+
+    #     cstar = self.Props_obj.C.get_Cstar(self.Pc,MR)
+
+    #     return cstar
     def getCstar(self):
-        
-        MR = self.MR
+        if 'cstar' not in self._cache:
+            self._cache['cstar'] = self.Props_obj.C.get_Cstar(self.Pc, self.MR)
+        return self._cache['cstar']
 
-        cstar = self.Props_obj.C.get_Cstar(self.Pc,MR)
+    # def Chambertransport(self):
 
-        return cstar
 
+    #     Cptransport, viscositytransport, thermalcondtransport, prantltransport, gammatransport = ChamberTransport(self.mdot_total,self.MR,self.Pc,self.geom,self.eps,self.Props_obj)
+
+    #     return Cptransport, viscositytransport, thermalcondtransport, prantltransport, gammatransport
     def Chambertransport(self):
-
-
-        Cptransport, viscositytransport, thermalcondtransport, prantltransport, gammatransport = ChamberTransport(self.mdot_total,self.MR,self.Pc,self.geom,self.eps,self.Props_obj)
-
-        return Cptransport, viscositytransport, thermalcondtransport, prantltransport, gammatransport
-        
+        if 'chambertransport' not in self._cache:
+            self._cache['chambertransport'] = ChamberTransport(
+                self.mdot_total, self.MR, self.Pc, self.geom, self.eps, self.Props_obj
+            )
+        return self._cache['chambertransport']
     
+    # def TPRhostag(self):
+
+    #     MachArea = self.Mach
+
+    #     TempsC,Tstag,PressuresC,RhosC = TPRhoStag(self.mdot_total,self.MR,self.Pc,MachArea,self.geom,self.eps,self.Props_obj)
+
+    #     return TempsC,Tstag,PressuresC,RhosC
     def TPRhostag(self):
+        if 'tprhostag' not in self._cache:
+            MachArea = self.Mach
+            self._cache['tprhostag'] = TPRhoStag(
+                self.mdot_total, self.MR, self.Pc,
+                MachArea, self.geom, self.eps, self.Props_obj
+            )
+        return self._cache['tprhostag']
 
-        MachArea = self.Mach
+    # def Mach(self,z,R):
 
-        TempsC,Tstag,PressuresC,RhosC = TPRhoStag(self.mdot_total,self.MR,self.Pc,MachArea,self.geom,self.eps,self.Props_obj)
+    #     geom = self.geom
 
-        return TempsC,Tstag,PressuresC,RhosC
-    
-
-    def Mach(self,z,R):
-
-        geom = self.geom
-
-        _, gamma = self.Props_obj.C.get_Throat_MolWt_gamma(self.Pc,self.MR,self.eps)
+    #     _, gamma = self.Props_obj.C.get_Throat_MolWt_gamma(self.Pc,self.MR,self.eps)
         
-        mach = MachArea(z,R,self.geom,gamma)
+    #     mach = MachArea(z,R,self.geom,gamma)
 
-        return mach
+    #     return mach
+    def Mach(self, z, R):
+        if 'gamma_throat' not in self._cache:
+            _, self._cache['gamma_throat'] = \
+                self.Props_obj.C.get_Throat_MolWt_gamma(self.Pc, self.MR, self.eps)
+        return MachArea(z, R, self.geom, self._cache['gamma_throat'])
 
+    # mach interpolator for faster repeated calls
+    def build_mach_interpolator(self, z_array, R):
+        if 'gamma_throat' not in self._cache:
+            _, self._cache['gamma_throat'] = \
+                self.Props_obj.C.get_Throat_MolWt_gamma(self.Pc, self.MR, self.eps)
+        gamma = self._cache['gamma_throat']
 
-
-
-
-
-
-
-
-
-
-
-
-
+        mach_arr = np.array([MachArea(z, R, self.geom, gamma) for z in z_array])
+        return PchipInterpolator(z_array, mach_arr)
 
 
 
