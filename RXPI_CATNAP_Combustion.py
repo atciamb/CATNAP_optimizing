@@ -305,7 +305,11 @@ def TPRhoStag(mdot_total,MR,Pc,Mach,geom,eps,Props_obj):
     
     return TempsC,Tstag,PressuresC,RhosC
 
-
+@njit(cache=True)
+def _area_mach_residual(M, AR, gamma):
+    return (1.0 / M) * (
+        (2.0 / (gamma + 1.0)) * (1.0 + (gamma - 1.0) / 2.0 * M * M)
+    ) ** ((gamma + 1.0) / (2.0 * (gamma - 1.0))) - AR
 
 
 def MachArea(z, R, geom, gamma):
@@ -314,9 +318,9 @@ def MachArea(z, R, geom, gamma):
 
     # gamma = gammatransport(Lnozzle) # gamma from throat assumed for entire nozzle (after combustion, approximate)
 
-    def area_mach_residual(M, AR, gamma):
-        return (1/M) * ((2/(gamma+1)) * (1 + (gamma-1)/2 * M**2)) \
-               **((gamma+1) / (2*(gamma-1))) - AR
+    # def area_mach_residual(M, AR, gamma):  --- replaced with numba-optimized version above
+    #     return (1/M) * ((2/(gamma+1)) * (1 + (gamma-1)/2 * M**2)) \
+    #            **((gamma+1) / (2*(gamma-1))) - AR
 
     Rt      = R(Lnozzle)
     At      = pi*(Rt**2)
@@ -329,10 +333,10 @@ def MachArea(z, R, geom, gamma):
         Mach = 1.0
 
     elif z < Lnozzle:  
-        Mach = brentq(area_mach_residual, 1.0, 50.0, args=(AR, gamma))
+        Mach = brentq(_area_mach_residual, 1.0, 50.0, args=(AR, gamma))
 
     else:         
-        Mach = brentq(area_mach_residual, 1e-6, 1.0, args=(AR, gamma))
+        Mach = brentq(_area_mach_residual, 1e-6, 1.0, args=(AR, gamma))
 
     return Mach
 
