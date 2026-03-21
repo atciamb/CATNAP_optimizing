@@ -3,831 +3,811 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>CATNAP Dashboard — Altair</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<title>CATNAP — Altair Engine Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+
 :root {
-  --bg0: #03080f;
-  --bg1: #070d16;
-  --bg2: #0a1525;
-  --bg3: #0e1e34;
-  --border: #162030;
-  --border2: #1e3050;
-  --blue0: #0a4a8a;
-  --blue1: #1468b8;
-  --blue2: #2c8fe8;
-  --blue3: #6ab8ff;
-  --blue4: #b0d8ff;
-  --cyan: #38d4e8;
-  --amber: #f5a623;
-  --orange: #ff6b2b;
-  --red: #ff4466;
-  --magenta: #e040fb;
-  --green: #39ff88;
-  --yellow: #f0e040;
-  --text: #eef4ff;
-  --text2: #9ab8d8;
-  --text3: #5a7898;
-  --mono: 'Courier New', monospace;
-  --sans: 'Segoe UI', system-ui, sans-serif;
+  --bg:     #07090f;
+  --panel:  #0d1117;
+  --border: #1a2233;
+  --accent: #00d4ff;
+  --orange: #ff6b35;
+  --purple: #a78bfa;
+  --green:  #34d399;
+  --red:    #f87171;
+  --yellow: #facc15;
+  --blue:   #60a5fa;
+  --dim:    #4a5568;
+  --text:   #c9d1d9;
+  --muted:  #586069;
+  --glow:   rgba(0,212,255,0.10);
 }
+
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:var(--bg0);color:var(--text);font-family:var(--sans);font-size:13px;overflow-x:hidden}
+html,body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;font-size:13px}
+
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,255,0.022) 1px,transparent 1px);
+  background-size:44px 44px;
+}
+
+.wrapper{position:relative;z-index:1;padding:18px 22px 48px;max-width:1900px;margin:0 auto}
 
 /* ── HEADER ── */
-.hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg1);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
-.hdr-left{display:flex;align-items:center;gap:14px}
-.logo{font-family:var(--mono);font-size:11px;color:#39ff88;letter-spacing:.16em;font-weight:700}
-.engine-tag{background:#0a1f10;border:1px solid #39ff88;color:#39ff88;font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:3px;letter-spacing:.1em;font-weight:700}
-.hdr-title{font-size:15px;font-weight:700;letter-spacing:.06em;color:#ffffff}
-.status-row{display:flex;align-items:center;gap:8px}
-.dot{width:7px;height:7px;border-radius:50%;background:#555}
-.dot.ok{background:var(--green)}
-.dot.dim{background:var(--text3)}
-.status-label{font-family:var(--mono);font-size:10px;color:#a8d8f0}
+header{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:18px;
+}
+.logo{display:flex;flex-direction:column;gap:3px}
+.logo .eyebrow{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.25em;color:var(--accent)}
+.logo h1{font-size:36px;font-weight:700;letter-spacing:.06em;color:#fff;line-height:1}
+.logo h1 em{color:var(--accent);font-style:normal}
+.logo .sub{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.12em}
+.hstats{display:flex;gap:28px;flex-wrap:wrap}
+.hstat .lbl{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+.hstat .val{font-family:'Share Tech Mono',monospace;font-size:20px;color:var(--accent);line-height:1.15}
 
-/* ── LAYOUT ── */
-.shell{display:grid;grid-template-columns:220px 1fr;height:calc(100vh - 45px)}
+/* ── TABS ── */
+.tabs{display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.tab-label{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.2em;margin-right:4px}
+.tab{
+  background:var(--panel);border:1px solid var(--border);
+  color:var(--muted);font-family:'Share Tech Mono',monospace;
+  font-size:10px;letter-spacing:.12em;padding:5px 14px;
+  cursor:pointer;text-transform:uppercase;transition:all .15s;position:relative;
+}
+.tab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--accent);transform:scaleX(0);transition:transform .2s}
+.tab:hover{color:var(--text);border-color:var(--dim)}
+.tab.active{color:var(--accent);border-color:var(--accent);background:var(--glow)}
+.tab.active::after{transform:scaleX(1)}
 
-/* ── SIDEBAR ── */
-.sidebar{background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
-.sb-sec{padding:14px 14px 10px;border-bottom:1px solid var(--border)}
-.sb-label{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:#f5a623;font-weight:700;text-transform:uppercase;margin-bottom:10px}
-.import-area{width:100%;height:90px;background:var(--bg0);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:9px;padding:7px;resize:vertical;outline:none;border-radius:2px}
-.import-area:focus{border-color:var(--blue2)}
-.btn{display:block;width:100%;margin-top:6px;padding:7px;background:transparent;border:1px solid #2c8fe8;color:#6ab8ff;font-family:var(--mono);font-size:10px;letter-spacing:.08em;cursor:pointer;text-transform:uppercase;border-radius:2px;transition:background .15s,color .15s,border-color .15s}
-.btn:hover{background:#1468b8;color:#ffffff;border-color:#38d4e8}
-.btn.dim{border-color:var(--border2);color:var(--text3)}
-.btn.dim:hover{background:var(--border2);color:var(--text)}
+/* ── SNAP STRIP ── */
+.snap-strip{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--panel);border:1px solid var(--border);
+  padding:8px 14px;margin-bottom:14px;
+}
+.snap-strip .snap-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.snap-strip .snap-time{font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--accent);min-width:72px}
+.snap-btn{
+  font-family:'Share Tech Mono',monospace;font-size:9px;padding:3px 8px;
+  border:1px solid var(--border);color:var(--muted);background:transparent;
+  cursor:pointer;letter-spacing:.08em;transition:all .12s;
+}
+.snap-btn:hover{border-color:var(--orange);color:var(--orange)}
+.snap-btn.active{border-color:var(--accent);color:var(--accent);background:var(--glow)}
 
-.snap-grid{display:flex;flex-wrap:wrap;gap:5px}
-.snap-btn{font-family:var(--mono);font-size:9px;padding:3px 7px;border:1px solid #1e3050;color:#9ab8d8;background:transparent;cursor:pointer;border-radius:2px;transition:all .12s}
-.snap-btn:hover{border-color:#f5a623;color:#f5a623}
-.snap-btn.active{border-color:#f5a623;color:#fff;background:rgba(245,166,35,.2)}
+/* ── GRID ── */
+.view{display:none;flex-direction:column;gap:14px}
+.view.visible{display:flex}
+.row{display:grid;gap:14px}
+.cols-1{grid-template-columns:1fr}
+.cols-2{grid-template-columns:1fr 1fr}
+.cols-3{grid-template-columns:1fr 1fr 1fr}
 
-.slider-wrap{display:flex;flex-direction:column;gap:8px}
-.slider-readout{display:flex;justify-content:space-between;align-items:baseline}
-.slider-val{font-family:var(--mono);font-size:22px;color:#f5a623}
-.slider-unit{font-size:10px;color:#9ab8d8}
-input[type=range]{width:100%;-webkit-appearance:none;height:2px;background:var(--border2);border-radius:1px;outline:none;cursor:pointer}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#f5a623;cursor:pointer}
+/* ── CARDS ── */
+.card{
+  background:var(--panel);border:1px solid var(--border);
+  position:relative;overflow:hidden;transition:border-color .2s;
+}
+.card:hover{border-color:rgba(0,212,255,.28)}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),transparent 55%);opacity:.45}
+.card-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px 5px;border-bottom:1px solid var(--border);
+}
+.card-head .title{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--accent);text-transform:uppercase}
+.card-head .unit{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted)}
+.pbox{width:100%}
+.h200{height:200px} .h260{height:260px} .h300{height:300px}
+.h340{height:340px} .h400{height:400px} .h460{height:460px}
 
-.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.kpi{background:var(--bg0);border:1px solid var(--border);border-radius:2px;padding:7px 9px}
-.kpi-lbl{font-family:var(--mono);font-size:9px;color:#9ab8d8;letter-spacing:.1em;text-transform:uppercase}
-.kpi-val{font-family:var(--mono);font-size:15px;margin-top:2px;color:#ffffff;font-weight:600}
-.kpi-val.hot{color:#ff4466}
-.kpi-val.cold{color:#38d4e8}
-.kpi-val.flux{color:#f5a623}
-.kpi-val.grn{color:#39ff88}
+/* ── KPI ROW ── */
+.kpi-row{display:flex;gap:0;border:1px solid var(--border);margin-bottom:14px}
+.kpi-cell{flex:1;padding:10px 16px;border-right:1px solid var(--border);font-family:'Share Tech Mono',monospace}
+.kpi-cell:last-child{border-right:none}
+.kpi-cell .k{font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase}
+.kpi-cell .v{font-size:17px;margin-top:2px;color:var(--text)}
+.kpi-cell .v.accent{color:var(--accent)}
+.kpi-cell .v.orange{color:var(--orange)}
+.kpi-cell .v.green{color:var(--green)}
+.kpi-cell .v.purple{color:var(--purple)}
+.kpi-cell .v.red{color:var(--red)}
 
-/* ── NAV ── */
-.nav{display:flex;gap:0;background:var(--bg1);border-bottom:1px solid var(--border);padding:0 18px}
-.nav-tab{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#7090b0;padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
-.nav-tab:hover{color:#ffffff}
-.nav-tab.active{color:#f5a623;border-bottom-color:#f5a623}
+/* ── NO DATA ── */
+.nodata-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:320px;gap:12px;border:1px solid var(--border)}
+.nodata-icon{font-size:32px;opacity:.12;color:var(--accent)}
+.nodata-wrap p{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--muted)}
+.nodata-wrap span{font-size:9px;color:var(--border)}
+.nodata-wrap textarea{
+  width:min(500px,90%);height:80px;background:var(--panel);border:1px solid var(--border);
+  color:var(--text);font-family:'Share Tech Mono',monospace;font-size:9px;padding:8px;
+  resize:vertical;outline:none;
+}
+.nodata-wrap textarea:focus{border-color:var(--accent)}
+.nodata-wrap .btn-row{display:flex;gap:8px}
+.nodata-btn{
+  background:transparent;border:1px solid var(--accent);color:var(--accent);
+  font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 16px;
+  letter-spacing:.1em;cursor:pointer;text-transform:uppercase;transition:all .15s;
+}
+.nodata-btn:hover{background:var(--glow);color:#fff}
+.nodata-btn.dim{border-color:var(--border);color:var(--muted)}
+.nodata-btn.dim:hover{border-color:var(--dim);color:var(--text)}
 
-/* ── CONTENT ── */
-.content{overflow-y:auto;background:var(--bg0)}
-.panel{display:none;padding:16px 18px}
-.panel.active{display:block}
-
-/* chart grids */
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
-.g1{margin-bottom:12px}
-
-.ccard{background:var(--bg1);border:1px solid var(--border);border-radius:3px;padding:12px 14px;position:relative;overflow:hidden}
-.ch-wrap{position:relative;width:100%}
-.ch-wrap canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important}
-.ccard::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:#2c8fe8}
-.ccard.accent-cyan::after{background:#38d4e8}
-.ccard.accent-amber::after{background:#f5a623}
-.ccard.accent-red::after{background:#ff4466}
- .ccard.accent-green::after{background:#39ff88}
-.ccard.accent-multi::after{background:linear-gradient(90deg,var(--blue2),var(--cyan),var(--amber))}
-
-.ct{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:#cce0ff;font-weight:600;text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
-.cu{color:#f5a623;font-size:10px;font-weight:700}
-
-/* contour canvas */
-.contour-canvas{display:block;width:100%;height:110px;border-radius:2px;image-rendering:pixelated}
-.cb-wrap{display:flex;align-items:center;gap:10px;margin-top:6px}
-.cb-bar{flex:1;height:6px;border-radius:1px}
-.cb-lbl{font-family:var(--mono);font-size:9px;color:#f5a623;white-space:nowrap;font-weight:700}
-
-/* metric selector */
-select{background:var(--bg0);border:1px solid var(--border2);color:#d0eeff;font-family:var(--mono);font-size:10px;padding:5px 8px;outline:none;cursor:pointer;border-radius:2px;width:100%}
-select:focus{border-color:var(--blue2)}
-
-/* no-data */
-.nodata{display:flex;flex-direction:column;align-items:center;justify-content:center;height:280px;gap:10px;color:#506880}
-.nodata-icon{font-size:36px;opacity:.25}
-.nodata p{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:#7090b0}
-.nodata span{font-size:9px;color:var(--border2)}
-
-/* ── TABLE ── */
-.tbl-wrap{overflow-x:auto;margin-top:0}
-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10px}
-thead th{color:#f5a623;font-size:9px;letter-spacing:.14em;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid #1e3050;text-align:right;white-space:nowrap;font-weight:700}
-thead th:first-child{text-align:left}
-tbody td{padding:5px 10px;border-bottom:1px solid rgba(20,38,68,.4);text-align:right;color:#ddeeff}
-tbody td:first-child{text-align:left;color:#38d4e8}
-tbody tr:hover td{background:rgba(255,255,255,.02)}
+/* ── FOOTER BAR ── */
+.infobar{display:flex;border-top:1px solid var(--border);margin-top:18px;flex-wrap:wrap}
+.icell{flex:1;min-width:120px;padding:10px 18px;border-right:1px solid var(--border);font-family:'Share Tech Mono',monospace}
+.icell:last-child{border-right:none}
+.icell .k{font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase}
+.icell .v{font-size:15px;color:var(--text);margin-top:2px}
+.icell .v b{color:var(--orange);font-weight:400}
 </style>
 </head>
 <body>
+<div class="wrapper">
 
-<div class="hdr">
-  <div class="hdr-left">
-    <div class="logo">RXPI/CATNAP</div>
-    <div class="engine-tag" id="engineTag">NO DATA</div>
+<!-- ════ HEADER ════ -->
+<header>
+  <div class="logo">
+    <span class="eyebrow">RXPI · Coupled Adiabatic Tank &amp; Nozzle Analysis Program</span>
+    <h1>CAT<em>NAP</em></h1>
+    <span class="sub">Engine: Altair &nbsp;·&nbsp; N₂O / Ethanol</span>
   </div>
-  <div class="hdr-title">Coupled Adiabatic Tank &amp; Nozzle Analysis Program</div>
-  <div class="status-row">
-    <div class="dot" id="statusDot"></div>
-    <div class="status-label" id="statusLabel">awaiting data</div>
+  <div class="hstats">
+    <div class="hstat"><div class="lbl">Sim Time</div><div class="val" id="hs-time">—</div></div>
+    <div class="hstat"><div class="lbl">Snapshots</div><div class="val" id="hs-snaps">—</div></div>
+    <div class="hstat"><div class="lbl">Peak Thrust</div><div class="val" id="hs-thrust">—</div></div>
+    <div class="hstat"><div class="lbl">Total Impulse</div><div class="val" id="hs-impulse">—</div></div>
+    <div class="hstat"><div class="lbl">Peak T_wall</div><div class="val" id="hs-twall">—</div></div>
+    <div class="hstat"><div class="lbl">Peak q″</div><div class="val" id="hs-qflux">—</div></div>
+  </div>
+</header>
+
+<!-- ════ TABS ════ -->
+<div class="tabs">
+  <span class="tab-label">View ▸</span>
+  <button class="tab active"  onclick="showTab('feed',this)">Feed System</button>
+  <button class="tab"         onclick="showTab('regen',this)">Regen Profiles</button>
+  <button class="tab"         onclick="showTab('transport',this)">Transport Props</button>
+  <button class="tab"         onclick="showTab('tempsC',this)">Gas Temperatures</button>
+  <button class="tab"         onclick="showTab('nozzle',this)">Nozzle Contour</button>
+  <button class="tab"         onclick="showTab('contour',this)">Heat Map</button>
+</div>
+
+<!-- ════ NO DATA ════ -->
+<div id="view-nodata" class="view visible">
+  <div class="nodata-wrap">
+    <div class="nodata-icon">◈</div>
+    <p>NO SIMULATION DATA LOADED</p>
+    <span>Paste catnap_results.json or load demo data</span>
+    <textarea id="jsonIn" placeholder="Paste catnap_results.json content here..."></textarea>
+    <div class="btn-row">
+      <button class="nodata-btn" onclick="loadJSON()">&#9654; Load JSON</button>
+      <button class="nodata-btn dim" onclick="loadDemo()">Load Demo Data</button>
+    </div>
   </div>
 </div>
 
-<div class="shell">
-
-  <div class="sidebar">
-    <div class="sb-sec">
-      <div class="sb-label">Data Import</div>
-      <textarea class="import-area" id="jsonIn" placeholder='Paste catnap_results.json here...'></textarea>
-      <button class="btn" onclick="loadJSON()">&#9654; Load JSON</button>
-      <button class="btn dim" onclick="loadDemo()">Load demo data</button>
-    </div>
-
-    <div class="sb-sec">
-      <div class="sb-label">Regen Snapshot</div>
-      <div class="slider-wrap">
-        <div class="slider-readout">
-          <span class="slider-val" id="snapVal">—</span>
-          <span class="slider-unit">seconds</span>
-        </div>
-        <input type="range" id="snapSlider" min="0" max="0" value="0" oninput="setSnap(+this.value)">
-        <div class="snap-grid" id="snapGrid"></div>
-      </div>
-    </div>
-
-    <div class="sb-sec">
-      <div class="sb-label">Regen KPIs</div>
-      <div class="kpi-grid">
-        <div class="kpi"><div class="kpi-lbl">Peak T&#8346;&#8346;&#8347;&#8347;</div><div class="kpi-val hot" id="k1">—</div></div>
-        <div class="kpi"><div class="kpi-lbl">Peak T&#8346;&#8349;&#8347;&#8347;</div><div class="kpi-val cold" id="k2">—</div></div>
-        <div class="kpi"><div class="kpi-lbl">Peak q″</div><div class="kpi-val flux" id="k3">—</div></div>
-        <div class="kpi"><div class="kpi-lbl">Peak hg</div><div class="kpi-val" id="k4">—</div></div>
-        <div class="kpi"><div class="kpi-lbl">ΔP cool</div><div class="kpi-val grn" id="k5">—</div></div>
-        <div class="kpi"><div class="kpi-lbl">ΔT cool</div><div class="kpi-val" id="k6">—</div></div>
-      </div>
-    </div>
-
-    <div class="sb-sec">
-      <div class="sb-label">Contour Metric</div>
-      <select id="contourMetric" onchange="drawContour()">
-        <option value="Qflux_3d">Heat flux q″ (MW/m²)</option>
-        <option value="Twall_3d">Wall temperature (K)</option>
-        <option value="hg_3d">Bartz hg (W/m²K)</option>
-        <option value="Tcool_3d">Coolant temperature (K)</option>
-        <option value="Pcool_3d">Coolant pressure (MPa)</option>
-      </select>
-    </div>
-
-    <div class="sb-sec" style="margin-top:auto">
-      <div class="sb-label">Feed KPIs</div>
-      <div class="kpi-grid">
-        <div class="kpi"><div class="kpi-lbl">Avg Thrust</div><div class="kpi-val grn" id="fk1">—</div></div>
-        <div class="kpi"><div class="kpi-lbl">Avg Pc</div><div class="kpi-val" id="fk2">—</div></div>
-        <div class="kpi"><div class="kpi-lbl">Avg Isp</div><div class="kpi-val" id="fk3">—</div></div>
-        <div class="kpi"><div class="kpi-lbl">Total Imp</div><div class="kpi-val flux" id="fk4">—</div></div>
-      </div>
-    </div>
+<!-- ════ FEED SYSTEM ════ -->
+<div id="view-feed" class="view">
+  <div class="kpi-row">
+    <div class="kpi-cell"><div class="k">Avg Thrust</div><div class="v accent" id="kf1">—</div></div>
+    <div class="kpi-cell"><div class="k">Avg Chamber P</div><div class="v orange" id="kf2">—</div></div>
+    <div class="kpi-cell"><div class="k">Avg Isp</div><div class="v green" id="kf3">—</div></div>
+    <div class="kpi-cell"><div class="k">Total Impulse</div><div class="v purple" id="kf4">—</div></div>
+    <div class="kpi-cell"><div class="k">Avg O/F</div><div class="v" id="kf5">—</div></div>
+    <div class="kpi-cell"><div class="k">Avg ṁ</div><div class="v" id="kf6">—</div></div>
   </div>
+  <div class="row cols-2">
+    <div class="card"><div class="card-head"><span class="title">Tank &amp; Chamber Pressure</span><span class="unit">MPa &nbsp;|&nbsp; K</span></div><div class="pbox h300" id="p-pressure"></div></div>
+    <div class="card"><div class="card-head"><span class="title">Thrust &amp; Specific Impulse</span><span class="unit">kN &nbsp;|&nbsp; s</span></div><div class="pbox h300" id="p-thrust"></div></div>
+  </div>
+  <div class="row cols-2">
+    <div class="card"><div class="card-head"><span class="title">Mass Flow &amp; O/F Ratio</span><span class="unit">kg/s</span></div><div class="pbox h260" id="p-massflow"></div></div>
+    <div class="card"><div class="card-head"><span class="title">Vapor Quality &amp; Cumulative Mass</span><span class="unit">— &nbsp;|&nbsp; kg</span></div><div class="pbox h260" id="p-quality"></div></div>
+  </div>
+</div>
 
-  <div style="display:flex;flex-direction:column;overflow:hidden">
-    <div class="nav">
-      <div class="nav-tab active" onclick="switchTab('feed',this)">Feed System</div>
-      <div class="nav-tab" onclick="switchTab('regen',this)">Regen Profiles</div>
-      <div class="nav-tab" onclick="switchTab('transport',this)">Transport Props</div>
-      <div class="nav-tab" onclick="switchTab('tempsC',this)">Gas Temperatures</div>
-      <div class="nav-tab" onclick="switchTab('contour',this)">Contour Map</div>
-      <div class="nav-tab" onclick="switchTab('table',this)">Data Table</div>
-    </div>
+<!-- ════ REGEN PROFILES ════ -->
+<div id="view-regen" class="view">
+  <div class="snap-strip">
+    <span class="snap-lbl">Snapshot</span>
+    <span class="snap-time" id="regen-t">—</span>
+    <div id="regen-btns" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi-cell"><div class="k">Peak T_wall</div><div class="v orange" id="kr1">—</div></div>
+    <div class="kpi-cell"><div class="k">Peak T_cool</div><div class="v accent" id="kr2">—</div></div>
+    <div class="kpi-cell"><div class="k">Peak q″</div><div class="v red" id="kr3">—</div></div>
+    <div class="kpi-cell"><div class="k">Peak hg</div><div class="v purple" id="kr4">—</div></div>
+    <div class="kpi-cell"><div class="k">ΔP coolant</div><div class="v green" id="kr5">—</div></div>
+    <div class="kpi-cell"><div class="k">ΔT coolant</div><div class="v" id="kr6">—</div></div>
+  </div>
+  <div class="row cols-2">
+    <div class="card"><div class="card-head"><span class="title">Wall &amp; Coolant Temperature</span><span class="unit">K</span></div><div class="pbox h300" id="r-TC"></div></div>
+    <div class="card"><div class="card-head"><span class="title">Heat Flux &amp; Bartz h<sub>g</sub></span><span class="unit">MW/m² &nbsp;|&nbsp; W/m²K</span></div><div class="pbox h300" id="r-QH"></div></div>
+  </div>
+  <div class="row cols-1">
+    <div class="card"><div class="card-head"><span class="title">Coolant Pressure</span><span class="unit">MPa</span></div><div class="pbox h260" id="r-P"></div></div>
+  </div>
+</div>
 
-    <div class="content" id="mainContent">
+<!-- ════ TRANSPORT PROPS ════ -->
+<div id="view-transport" class="view">
+  <div class="snap-strip">
+    <span class="snap-lbl">Snapshot</span>
+    <span class="snap-time" id="trans-t">—</span>
+    <div id="trans-btns" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+  </div>
+  <div class="row cols-2">
+    <div class="card"><div class="card-head"><span class="title">Mach Number &amp; Specific Heat C<sub>p</sub></span><span class="unit">— &nbsp;|&nbsp; J/kg·K</span></div><div class="pbox h300" id="tr-MC"></div></div>
+    <div class="card"><div class="card-head"><span class="title">Dynamic Viscosity &amp; Thermal Conductivity</span><span class="unit">Pa·s &nbsp;|&nbsp; W/m·K</span></div><div class="pbox h300" id="tr-MK"></div></div>
+  </div>
+  <div class="row cols-1">
+    <div class="card"><div class="card-head"><span class="title">Prandtl Number &amp; Specific Heat Ratio γ</span><span class="unit">—</span></div><div class="pbox h260" id="tr-PG"></div></div>
+  </div>
+</div>
 
-      <!-- FEED SYSTEM -->
-      <div class="panel active" id="tab-feed">
-        <div id="noFeed" class="nodata"><div class="nodata-icon">◈</div><p>NO DATA LOADED</p><span>Paste JSON and click Load, or use demo data</span></div>
-        <div id="feedCharts" style="display:none">
-          <div class="g2">
-            <div class="ccard accent-cyan">
-              <div class="ct">Thrust <span class="cu">kN</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="cF"></canvas></div>
-            </div>
-            <div class="ccard">
-              <div class="ct">Specific Impulse <span class="cu">s</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="cIsp"></canvas></div>
-            </div>
-          </div>
-          <div class="g2">
-            <div class="ccard">
-              <div class="ct">Chamber &amp; Tank Pressure <span class="cu">MPa</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="cP"></canvas></div>
-            </div>
-            <div class="ccard accent-amber">
-              <div class="ct">Tank Temperature <span class="cu">K</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="cT"></canvas></div>
-            </div>
-          </div>
-          <div class="g2">
-            <div class="ccard">
-              <div class="ct">Mass Flow Rate <span class="cu">kg/s</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="cMdot"></canvas></div>
-            </div>
-            <div class="ccard">
-              <div class="ct">O/F Mass Ratio <span class="cu">—</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="cMR"></canvas></div>
-            </div>
-          </div>
-          <div class="g1">
-            <div class="ccard">
-              <div class="ct">Vapor Quality x <span class="cu">—</span></div>
-              <div class="ch-wrap" style="height:100px"><canvas id="cX"></canvas></div>
-            </div>
-          </div>
-        </div>
-      </div>
+<!-- ════ GAS TEMPERATURES ════ -->
+<div id="view-tempsC" class="view">
+  <div class="snap-strip">
+    <span class="snap-lbl">Snapshot</span>
+    <span class="snap-time" id="tc-t">—</span>
+    <div id="tc-btns" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+  </div>
+  <div class="row cols-2">
+    <div class="card"><div class="card-head"><span class="title">Recovery Temperature T<sub>r</sub></span><span class="unit">K</span></div><div class="pbox h300" id="tc-Tr"></div></div>
+    <div class="card"><div class="card-head"><span class="title">Stagnation Temperature T₀</span><span class="unit">K</span></div><div class="pbox h300" id="tc-T0"></div></div>
+  </div>
+  <div class="row cols-1">
+    <div class="card"><div class="card-head"><span class="title">T<sub>r</sub> vs T₀ — Current Snapshot</span><span class="unit">K</span></div><div class="pbox h260" id="tc-comp"></div></div>
+  </div>
+</div>
 
-      <!-- REGEN PROFILES -->
-      <div class="panel" id="tab-regen">
-        <div id="noRegen" class="nodata"><div class="nodata-icon">◈</div><p>NO DATA LOADED</p></div>
-        <div id="regenCharts" style="display:none">
-          <div class="g2">
-            <div class="ccard accent-red">
-              <div class="ct">Wall temperature (hot side) <span class="cu">K</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="rTwall"></canvas></div>
-            </div>
-            <div class="ccard">
-              <div class="ct">Coolant temperature <span class="cu">K</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="rTcool"></canvas></div>
-            </div>
-          </div>
-          <div class="g1">
-            <div class="ccard accent-amber">
-              <div class="ct">Heat flux q″ — all snapshots overlay <span class="cu">MW/m²</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="rQall"></canvas></div>
-            </div>
-          </div>
-          <div class="g2">
-            <div class="ccard accent-cyan">
-              <div class="ct">Bartz hg <span class="cu">W/m²K</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="rHg"></canvas></div>
-            </div>
-            <div class="ccard">
-              <div class="ct">Coolant pressure <span class="cu">MPa</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="rPcool"></canvas></div>
-            </div>
-          </div>
-          <div class="g1">
-            <div class="ccard accent-multi">
-              <div class="ct">Heat flux q″ — current snapshot <span class="cu">MW/m²</span></div>
-              <div class="ch-wrap" style="height:120px"><canvas id="rQsnap"></canvas></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- CONTOUR -->
-      <div class="panel" id="tab-contour">
-        <div id="noContour" class="nodata"><div class="nodata-icon">◈</div><p>NO DATA LOADED</p></div>
-        <div id="contourWrap" style="display:none">
-          <div class="ccard accent-multi" style="margin-bottom:12px">
-            <div class="ct" id="contourTitle">Heat flux map — axial position × time snapshot</div>
-            <canvas class="contour-canvas" id="contourCanvas"></canvas>
-            <div class="cb-wrap">
-              <span class="cb-lbl" id="cbMin">0</span>
-              <div class="cb-bar" id="cbBar" style="background:linear-gradient(90deg,#0a1525,#1468b8,#38d4e8,#f5a623,#e84444)"></div>
-              <span class="cb-lbl" id="cbMax">max</span>
-            </div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:5px">
-              Y axis = time snapshots (top = t[0]) &nbsp;|&nbsp; X axis = axial position z (left = nozzle exit)
-            </div>
-          </div>
-          <div class="g2">
-            <div class="ccard">
-              <div class="ct">All snapshots — Twall overlay <span class="cu">K</span></div>
-              <div class="ch-wrap" style="height:140px"><canvas id="oTwall"></canvas></div>
-            </div>
-            <div class="ccard">
-              <div class="ct">All snapshots — hg overlay <span class="cu">W/m²K</span></div>
-              <div class="ch-wrap" style="height:140px"><canvas id="oHg"></canvas></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TABLE -->
-      <div class="panel" id="tab-table">
-        <div id="noTable" class="nodata"><div class="nodata-icon">◈</div><p>NO DATA LOADED</p></div>
-        <div id="tableWrap" style="display:none">
-          <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-            <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">TABLE:</span>
-            <select id="tableMode" onchange="buildTable()" style="width:200px">
-              <option value="regen">Regen axial profile</option>
-              <option value="feed">Feed system time history</option>
-            </select>
-          </div>
-          <div class="tbl-wrap"><table><thead id="tHead"></thead><tbody id="tBody"></tbody></table></div>
-        </div>
-      </div>
-
-
-      <!-- TRANSPORT PROPERTIES -->
-      <div class="panel" id="tab-transport">
-        <div id="noTransport" class="nodata"><div class="nodata-icon">&#9672;</div><p>NO DATA LOADED</p><span>transport_3d required in JSON export</span></div>
-        <div id="transportCharts" style="display:none">
-          <div class="g2">
-            <div class="ccard accent-cyan">
-              <div class="ct">Mach number <span class="cu">&#8212;</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="trMach"></canvas></div>
-            </div>
-            <div class="ccard accent-amber">
-              <div class="ct">Specific heat Cp <span class="cu">J/kg&#183;K</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="trCp"></canvas></div>
-            </div>
-          </div>
-          <div class="g2">
-            <div class="ccard">
-              <div class="ct">Dynamic viscosity mu <span class="cu">Pa&#183;s</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="trMu"></canvas></div>
-            </div>
-            <div class="ccard">
-              <div class="ct">Thermal conductivity k <span class="cu">W/m&#183;K</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="trK"></canvas></div>
-            </div>
-          </div>
-          <div class="g2">
-            <div class="ccard">
-              <div class="ct">Prandtl number <span class="cu">&#8212;</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="trPr"></canvas></div>
-            </div>
-            <div class="ccard">
-              <div class="ct">Specific heat ratio gamma <span class="cu">&#8212;</span></div>
-              <div class="ch-wrap" style="height:130px"><canvas id="trGamma"></canvas></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- GAS TEMPERATURES -->
-      <div class="panel" id="tab-tempsC">
-        <div id="noTempsC" class="nodata"><div class="nodata-icon">&#9672;</div><p>NO DATA LOADED</p><span>tempsC_3d required in JSON export</span></div>
-        <div id="tempsCCharts" style="display:none">
-          <div class="g1">
-            <div class="ccard accent-red">
-              <div class="ct">Recovery (adiabatic wall) temperature T&#8336; &mdash; all snapshots <span class="cu">K</span></div>
-              <div class="ch-wrap" style="height:160px"><canvas id="tcTr"></canvas></div>
-            </div>
-          </div>
-          <div class="g1">
-            <div class="ccard accent-amber">
-              <div class="ct">Stagnation temperature T&#8320; &mdash; all snapshots <span class="cu">K</span></div>
-              <div class="ch-wrap" style="height:160px"><canvas id="tcT0"></canvas></div>
-            </div>
-          </div>
-          <div class="g1">
-            <div class="ccard accent-cyan">
-              <div class="ct">T&#8336; vs T&#8320; &mdash; current snapshot overlay <span class="cu">K</span></div>
-              <div class="ch-wrap" style="height:160px"><canvas id="tcComp"></canvas></div>
-            </div>
-          </div>
-        </div>
-      </div>
+<!-- ════ NOZZLE CONTOUR ════ -->
+<div id="view-nozzle" class="view">
+  <div class="row cols-1">
+    <div class="card">
+      <div class="card-head"><span class="title">Thrust Chamber Contour — R(z)</span><span class="unit">m · axisymmetric · true aspect ratio</span></div>
+      <div class="pbox h460" id="p-nozzle"></div>
     </div>
   </div>
 </div>
+
+<!-- ════ HEAT MAP ════ -->
+<div id="view-contour" class="view">
+  <div class="row cols-1">
+    <div class="card">
+      <div class="card-head">
+        <span class="title" id="hmap-title">Heat Flux Map</span>
+        <span class="unit">
+          <select id="contourMetric" onchange="drawContour()"
+            style="background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 6px;outline:none;cursor:pointer">
+            <option value="Qflux_3d">Heat flux q″ (MW/m²)</option>
+            <option value="Twall_3d">Wall temperature (K)</option>
+            <option value="hg_3d">Bartz hg (W/m²K)</option>
+            <option value="Tcool_3d">Coolant temperature (K)</option>
+            <option value="Pcool_3d">Coolant pressure (MPa)</option>
+          </select>
+        </span>
+      </div>
+      <div class="pbox h400" id="p-heatmap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ FOOTER ════ -->
+<div class="infobar" id="infobar" style="display:none">
+  <div class="icell"><div class="k">Propellants</div><div class="v">N₂O / <b>Ethanol</b></div></div>
+  <div class="icell"><div class="k">Throat Area</div><div class="v" id="fi-at">—</div></div>
+  <div class="icell"><div class="k">Expansion Ratio</div><div class="v" id="fi-eps">—</div></div>
+  <div class="icell"><div class="k">Init Tank Mass</div><div class="v" id="fi-m1">—</div></div>
+  <div class="icell"><div class="k">Axial Points</div><div class="v" id="fi-nz">—</div></div>
+  <div class="icell"><div class="k">Regen Snapshots</div><div class="v" id="fi-ns">—</div></div>
+</div>
+
+</div><!-- /wrapper -->
 
 <script>
-var D = null, snapIdx = 0, charts = {};
+/* ═══════════════════════════════════════════════
+   CATNAP Dashboard — reference style
+   Unit-safe · Single-snapshot regen/transport
+═══════════════════════════════════════════════ */
+var D = null, snapIdx = 0, _drawn = {};
 
-var PAL = ['#38d4e8','#f5a623','#39ff88','#ff4466','#e040fb','#ff6b2b','#f0e040'];
-var PAL_SNAP = ['#f5a623','#38d4e8','#39ff88','#ff4466','#e040fb'];
+/* ── PLOTLY BASE ── */
+var BG='#0d1117', GRID='#1a2233', MUTED='#586069', TEXT='#c9d1d9';
+var CFONT = "'Share Tech Mono',monospace";
 
-var BASE_CFG = {
-  responsive:true, maintainAspectRatio:false,
-  animation:{duration:250},
-  plugins:{
-    legend:{display:false},
-    tooltip:{
-      backgroundColor:'#060d18', borderColor:'#142644', borderWidth:1,
-      titleColor:'#6ab8ff', bodyColor:'#d0e8ff',
-      titleFont:{family:'Courier New',size:10},
-      bodyFont:{family:'Courier New',size:10}
-    }
-  },
-  scales:{
-    x:{ticks:{color:'#7090b0',font:{family:'Courier New',size:9},maxTicksLimit:8},grid:{color:'rgba(20,40,70,.8)'}},
-    y:{ticks:{color:'#7090b0',font:{family:'Courier New',size:9}},grid:{color:'rgba(20,40,70,.8)'}}
-  }
+var BASE_LAYOUT = {
+  paper_bgcolor: BG,
+  plot_bgcolor:  BG,
+  font: {family: CFONT, color: MUTED, size: 11},
+  margin: {l:62, r:72, t:10, b:72},
+  hovermode: 'x unified',
+  hoverlabel: {bgcolor:'#161b22', bordercolor:'#00d4ff',
+               font:{family:CFONT, size:11, color:TEXT}},
+  xaxis: {gridcolor:GRID, zerolinecolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10},
+          title:{font:{color:MUTED,size:11,family:CFONT}}},
+  yaxis: {gridcolor:GRID, zerolinecolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10},
+          title:{font:{color:MUTED,size:11,family:CFONT}}},
+  yaxis2: {gridcolor:'transparent', zerolinecolor:'transparent',
+           tickfont:{color:MUTED,family:CFONT,size:10},
+           title:{font:{color:MUTED,size:11,family:CFONT}},
+           overlaying:'y', side:'right'},
+  legend: {bgcolor:'rgba(0,0,0,0)', bordercolor:'transparent', borderwidth:0,
+           font:{color:TEXT,size:10,family:CFONT},
+           orientation:'h', x:0.5, y:-0.22, xanchor:'center', yanchor:'top'},
+  showlegend: true
 };
 
-function cfgFor(extraPlugins){
-  var c = JSON.parse(JSON.stringify(BASE_CFG));
-  if(extraPlugins) Object.assign(c.plugins, extraPlugins);
-  return c;
+var PCFG = {displayModeBar:true, displaylogo:false, responsive:true,
+            modeBarButtonsToRemove:['select2d','lasso2d']};
+
+function lay(overrides) {
+  var L = JSON.parse(JSON.stringify(BASE_LAYOUT));
+  if (overrides) Object.keys(overrides).forEach(function(k){ L[k] = overrides[k]; });
+  return L;
 }
 
-function mkChart(id, type, color, xLabel){
-  if(charts[id]) charts[id].destroy();
-  var ctx = document.getElementById(id).getContext('2d');
-  var cfg = cfgFor();
-  cfg.scales.x.type = 'linear';
-  if(xLabel) cfg.scales.x.title = {display:true, text:xLabel, color:'#4a6a90', font:{family:'Courier New',size:8}};
-  charts[id] = new Chart(ctx, {type:'line', data:{datasets:[]}, options:cfg});
-  return charts[id];
+function tr(x, y, name, color, yaxis, dash, width) {
+  return {type:'scatter', mode:'lines', x:x, y:y, name:name,
+    yaxis: yaxis||'y',
+    line:{color:color, width:width||2, dash:dash||'solid'},
+    hovertemplate: name+': %{y:.4g}<extra></extra>'};
 }
 
-function mkMultiLegend(id, xLabel){
-  if(charts[id]) charts[id].destroy();
-  var ctx = document.getElementById(id).getContext('2d');
-  var cfg = cfgFor();
-  cfg.scales.x.type = 'linear';
-  cfg.plugins.legend = {display:true, labels:{color:'#cce0ff', font:{family:'Courier New',size:9}, boxWidth:14, padding:8}};
-  if(xLabel) cfg.scales.x.title = {display:true, text:xLabel, color:'#4a6a90', font:{family:'Courier New',size:8}};
-  charts[id] = new Chart(ctx, {type:'line', data:{datasets:[]}, options:cfg});
-  return charts[id];
+function plt(id, traces, layout) {
+  (_drawn[id] ? Plotly.react : Plotly.newPlot)(id, traces, layout, PCFG);
+  _drawn[id] = true;
 }
 
-function ds(x, y, color, label){
-  return {
-    label: label||'', parsing:false,
-    data: y.map(function(v,i){return {x:+x[i].toFixed(6), y:v};}),
-    borderColor:color, borderWidth:1.5, pointRadius:0, tension:0.25, fill:false
-  };
+/* ── UNIT NORMALISATION ── */
+function maxFlat(arr) {
+  var m = 0;
+  if (!arr || !arr.length) return 0;
+  arr.forEach(function(s) {
+    (Array.isArray(s) ? s : [s]).forEach(function(v) { if(v > m) m = v; });
+  });
+  return m;
 }
 
-function setChartData(id, datasets){
-  if(!charts[id]) return;
-  charts[id].data.datasets = datasets;
-  charts[id].update('none');
+function normalizeData(r) {
+  if (r._normalized) return r;
+  /* Thrust N → kN */
+  if (r.F_arr && maxFlat(r.F_arr) > 500)
+    r.F_arr = r.F_arr.map(function(v){return v/1000;});
+  /* Pc Pa → MPa */
+  if (r.Pc_arr && maxFlat(r.Pc_arr) > 1e4)
+    r.Pc_arr = r.Pc_arr.map(function(v){return v/1e6;});
+  /* P2 Pa → MPa */
+  if (r.P2_arr && maxFlat(r.P2_arr) > 1e4)
+    r.P2_arr = r.P2_arr.map(function(v){return v/1e6;});
+  /* Pcool_3d Pa → MPa */
+  if (r.Pcool_3d && maxFlat(r.Pcool_3d) > 1e4)
+    r.Pcool_3d = r.Pcool_3d.map(function(s){return s.map(function(v){return v/1e6;});});
+  /* Qflux_3d W/m² → MW/m² */
+  if (r.Qflux_3d && maxFlat(r.Qflux_3d) > 1e4)
+    r.Qflux_3d = r.Qflux_3d.map(function(s){return s.map(function(v){return v/1e6;});});
+  r._normalized = true;
+  return r;
 }
 
 /* ── DEMO DATA ── */
-function loadDemo(){
-  var N=200, nz=60, Le=0.31;
-  var tv = [], Pc=[], P2=[], T2=[], x2=[], F=[], Isp=[], mdot=[], MR=[];
-  for(var i=0;i<N;i++){
-    var t=i/N*5;
-    tv.push(t);
-    Pc.push((2.35e6 - i*1200)/1e6);
-    P2.push((2.6e6 - i*1400)/1e6);
-    T2.push(289 - i*0.08);
-    x2.push(Math.min(i/N*1.2, 1.0));
-    F.push(4200 - i*2.5);
-    Isp.push(195 + i*0.01);
-    mdot.push(3.4 - i*0.002);
-    MR.push(3.2 - i*0.003);
+function loadDemo() {
+  var N=200, nz=80, Le=0.31;
+  var tv=[], Pc=[], P2=[], T2=[], x2=[], F=[], Isp=[], mdot=[], MR=[];
+  for (var i=0; i<N; i++) {
+    var t=i/N*5; tv.push(t);
+    Pc.push((2.35e6-i*1200)/1e6); P2.push((2.6e6-i*1400)/1e6);
+    T2.push(289-i*0.08); x2.push(Math.min(i/N*1.2, 1.0));
+    F.push((4200-i*2.5)/1000); Isp.push(195+i*0.01);
+    mdot.push(3.4-i*0.002); MR.push(3.2-i*0.003);
   }
-  var z = []; for(var i=0;i<nz;i++) z.push(i/(nz-1)*Le);
-  var times=[0.5,1.5,2.5,3.5,4.5];
-  var Tc3=[],Pc3=[],hg3=[],Tw3=[],Qf3=[];
-  var Lth = 0.107;
-  times.forEach(function(t,ti){
-    var sc=1-ti*0.04;
-    var tc=[], pc=[], hg=[], tw=[], qf=[];
-    for(var j=0;j<nz;j++){
-      var zj=z[j];
-      var peak=Math.exp(-Math.pow(zj-Lth,2)/0.0008);
-      tc.push(170+j/nz*80*sc);
-      pc.push((4.1e6-ti*1.2e5-j/nz*4e5)/1e6);
-      hg.push(5000*sc + 22000*sc*peak);
-      tw.push(600*sc + 460*sc*peak);
-      qf.push((8e6*sc + 38e6*sc*peak)/1e6);
+  var z=[], Lnoz=0.107, Lconv=0.183;
+  for (var j=0; j<nz; j++) z.push(j/(nz-1)*Le);
+  var Rt=0.026, Re=0.054, Rc=0.058;
+  var nozzR = z.map(function(zv){
+    if (zv<Lnoz){var t=zv/Lnoz; return Re+(Rt-Re)*(3*t*t-2*t*t*t);}
+    else if (zv<Lconv){var t=(zv-Lnoz)/(Lconv-Lnoz); return Rt+(Rc-Rt)*(3*t*t-2*t*t*t);}
+    else return Rc;
+  });
+  var times=[0.5,1.5,2.5,3.5,4.5], Lth=0.107;
+  var Tc3=[], Pc3=[], hg3=[], Tw3=[], Qf3=[];
+  times.forEach(function(t, ti) {
+    var sc=1-ti*0.04, tc=[], pc=[], hg=[], tw=[], qf=[];
+    for (var j=0; j<nz; j++) {
+      var pk=Math.exp(-Math.pow(z[j]-Lth,2)/0.0008);
+      tc.push(170+j/nz*80*sc); pc.push((4.1e6-ti*1.2e5-j/nz*4e5)/1e6);
+      hg.push(5000*sc+22000*sc*pk); tw.push(600*sc+460*sc*pk);
+      qf.push((8e6*sc+38e6*sc*pk)/1e6);
     }
     Tc3.push(tc); Pc3.push(pc); hg3.push(hg); Tw3.push(tw); Qf3.push(qf);
   });
-  D = {
-    timevec:tv, Pc_arr:Pc, P2_arr:P2, T2_arr:T2, x2_arr:x2,
-    F_arr:F.map(function(v){return v/1000;}),
-    Isp_arr:Isp, mdot_arr:mdot, massratio_arr:MR,
-    z_array:z, regen_times:times,
-    Tcool_3d:Tc3, Pcool_3d:Pc3, hg_3d:hg3, Twall_3d:Tw3, Qflux_3d:Qf3,
-    _demo:true
-  };
+  var tr3 = [];
+  times.forEach(function(t) {
+    var snap = [];
+    for (var j=0; j<nz; j++) {
+      var zj=z[j], M=zj<Lnoz?1+2.5*(1-zj/Lnoz):0.05+0.08*(1-(zj-Lnoz)/(Le-Lnoz));
+      snap.push([2800, 7e-5, 0.35, 0.52, 1.22, Math.max(0.01,M)]);
+    }
+    tr3.push(snap);
+  });
+  var tC3 = [];
+  times.forEach(function(t, ti) {
+    var snap = [], sc=1-ti*0.035;
+    for (var j=0; j<nz; j++) snap.push([2580*sc, 2640*sc]);
+    tC3.push(snap);
+  });
+  D = {timevec:tv, Pc_arr:Pc, P2_arr:P2, T2_arr:T2, x2_arr:x2, F_arr:F, Isp_arr:Isp,
+       mdot_arr:mdot, massratio_arr:MR, z_array:z, regen_times:times, nozzle_R:nozzR,
+       Tcool_3d:Tc3, Pcool_3d:Pc3, hg_3d:hg3, Twall_3d:Tw3, Qflux_3d:Qf3,
+       transport_3d:tr3, tempsC_3d:tC3, _demo:true};
   applyData();
 }
 
-function loadJSON(){
-  try{
-    var raw = JSON.parse(document.getElementById('jsonIn').value);
-    // Unit normalisations
-    if(raw.F_arr && raw.F_arr[0] > 500) raw.F_arr = raw.F_arr.map(function(v){return v/1000;});
-    if(raw.Pc_arr && raw.Pc_arr[0] > 10000) raw.Pc_arr = raw.Pc_arr.map(function(v){return v/1e6;});
-    if(raw.P2_arr && raw.P2_arr[0] > 10000) raw.P2_arr = raw.P2_arr.map(function(v){return v/1e6;});
-    if(raw.Pcool_3d && raw.Pcool_3d[0] && raw.Pcool_3d[0][0] > 1000) raw.Pcool_3d = raw.Pcool_3d.map(function(s){return s.map(function(v){return v/1e6;});});
-    if(raw.Qflux_3d && raw.Qflux_3d[0] && raw.Qflux_3d[0][0] > 1000) raw.Qflux_3d = raw.Qflux_3d.map(function(s){return s.map(function(v){return v/1e6;});});
-    D = raw;
+function loadJSON() {
+  try {
+    D = normalizeData(JSON.parse(document.getElementById('jsonIn').value));
     applyData();
-  }catch(e){ alert('JSON parse error: '+e.message); }
+  } catch(e) { alert('JSON parse error: '+e.message); }
 }
 
-function applyData(){
-  if(!D) return;
+/* ── APPLY DATA ── */
+function applyData() {
+  if (!D) return;
+  D = normalizeData(D);
   snapIdx = 0;
-  // slider
-  var sl = document.getElementById('snapSlider');
   var ns = D.regen_times ? D.regen_times.length : 0;
-  sl.max = Math.max(0, ns-1); sl.value = 0;
-  // snap buttons
-  var sg = document.getElementById('snapGrid');
-  sg.innerHTML = (D.regen_times||[]).map(function(t,i){
-    return '<button class="snap-btn'+(i===0?' active':'')+'" id="sb'+i+'" onclick="setSnap('+i+')">'+t.toFixed(2)+'s</button>';
-  }).join('');
-  // show/hide
-  show('feedCharts'); hide('noFeed');
-  if(ns>0){ show('regenCharts'); hide('noRegen'); show('contourWrap'); hide('noContour'); show('tableWrap'); hide('noTable'); }
-  // status
-  document.getElementById('statusDot').className = 'dot ok';
-  document.getElementById('statusLabel').textContent = D._demo ? 'demo data' : 'loaded';
-  document.getElementById('engineTag').textContent = 'ALTAIR';
-  // build all charts
-  buildFeedCharts();
-  buildRegenOverlays();
-  updateSnap();
-  computeFeedKPIs();
-  showTransportCharts();
-  showTempsCCharts();
-}
 
-/* ── FEED CHARTS ── */
-function buildFeedCharts(){
-  mkChart('cF','line','#38d4e8','Time (s)');
-  mkChart('cIsp','line','#2c8fe8','Time (s)');
-  mkChart('cP','line','#6ab8ff','Time (s)');
-  mkChart('cT','line','#f5a623','Time (s)');
-  mkChart('cMdot','line','#30d890','Time (s)');
-  mkChart('cMR','line','#b07cff','Time (s)');
-  mkChart('cX','line','#2c8fe8','Time (s)');
-  var tv = D.timevec;
-  setChartData('cF', [ds(tv,D.F_arr,'#38d4e8')]);
-  setChartData('cIsp', [ds(tv,D.Isp_arr,'#6ab8ff')]);
-  setChartData('cP', [
-    ds(tv,D.Pc_arr,'#6ab8ff','Pc (chamber)'),
-    ds(tv,D.P2_arr,'#2c8fe8','P2 (tank)')
-  ]);
-  charts['cP'].options.plugins.legend = {display:true, labels:{color:'#cce0ff',font:{family:'Courier New',size:9},boxWidth:12,padding:8}};
-  charts['cP'].update('none');
-  setChartData('cT', [ds(tv,D.T2_arr,'#f5a623')]);
-  setChartData('cMdot', [ds(tv,D.mdot_arr,'#30d890')]);
-  setChartData('cMR', [ds(tv,D.massratio_arr,'#b07cff')]);
-  setChartData('cX', [ds(tv,D.x2_arr,'#2c8fe8')]);
-}
-
-function computeFeedKPIs(){
-  if(!D) return;
-  var F=D.F_arr, Isp=D.Isp_arr, Pc=D.Pc_arr, tv=D.timevec;
-  var avgF = F.reduce(function(a,b){return a+b;},0)/F.length;
-  var avgIsp = Isp.reduce(function(a,b){return a+b;},0)/Isp.length;
-  var avgPc = Pc.reduce(function(a,b){return a+b;},0)/Pc.length;
-  var Imp = 0;
-  for(var i=0;i<F.length-1;i++) Imp += 0.5*(F[i]+F[i+1])*(tv[1]-tv[0])*1000;
-  document.getElementById('fk1').textContent = avgF.toFixed(2)+' kN';
-  document.getElementById('fk2').textContent = avgPc.toFixed(3)+' MPa';
-  document.getElementById('fk3').textContent = avgIsp.toFixed(1)+' s';
-  document.getElementById('fk4').textContent = (Imp/1000).toFixed(1)+' kN·s';
-}
-
-/* ── REGEN OVERLAYS (all snapshots) ── */
-function buildRegenOverlays(){
-  if(!D || !D.regen_times || D.regen_times.length===0) return;
-  mkMultiLegend('rQall','z (m)');
-  mkMultiLegend('oTwall','z (m)');
-  mkMultiLegend('oHg','z (m)');
-  var z=D.z_array, times=D.regen_times;
-  var dsQall=[], dsTw=[], dsHg=[];
-  times.forEach(function(t,i){
-    var c = PAL_SNAP[i%PAL_SNAP.length];
-    var lbl = 't='+t.toFixed(2)+'s';
-    dsQall.push(ds(z,D.Qflux_3d[i],c,lbl));
-    dsTw.push(ds(z,D.Twall_3d[i],c,lbl));
-    dsHg.push(ds(z,D.hg_3d[i],c,lbl));
+  /* Build snapshot button strips for all three tabs */
+  ['regen-btns','trans-btns','tc-btns'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = (D.regen_times||[]).map(function(t,i) {
+      return '<button class="snap-btn'+(i===0?' active':'')+
+             '" onclick="setSnap('+i+')">'+t.toFixed(2)+'s</button>';
+    }).join('');
   });
-  setChartData('rQall',dsQall);
-  setChartData('oTwall',dsTw);
-  setChartData('oHg',dsHg);
+
+  /* Switch from nodata view to feed view */
+  hide('view-nodata');
+  show('view-feed');
+  show('infobar');
+
+  /* Footer info */
+  document.getElementById('fi-nz').textContent = D.z_array ? D.z_array.length : '—';
+  document.getElementById('fi-ns').textContent = ns;
+  if (D.meta) {
+    if (D.meta.A_t) document.getElementById('fi-at').innerHTML = (D.meta.A_t*1e4).toFixed(3)+' <b>cm²</b>';
+    if (D.meta.eps) document.getElementById('fi-eps').textContent = D.meta.eps.toFixed(2);
+    if (D.meta.m1)  document.getElementById('fi-m1').innerHTML = D.meta.m1+' <b>kg</b>';
+  }
+
+  drawFeed();
+  updateSnap();
+  drawNozzle();
+}
+
+/* ── FEED ── */
+function drawFeed() {
+  if (!D) return;
+  var tv = D.timevec;
+
+  /* KPIs */
+  var sum = function(a){return a.reduce(function(s,v){return s+v;},0);};
+  var n = D.F_arr.length;
+  var dt = tv.length>1?tv[1]-tv[0]:0.1, Imp=0;
+  for (var i=0; i<n-1; i++) Imp += 0.5*(D.F_arr[i]+D.F_arr[i+1])*dt;
+  document.getElementById('kf1').textContent = (sum(D.F_arr)/n).toFixed(2)+' kN';
+  document.getElementById('kf2').textContent = (sum(D.Pc_arr)/n).toFixed(3)+' MPa';
+  document.getElementById('kf3').textContent = (sum(D.Isp_arr)/n).toFixed(1)+' s';
+  document.getElementById('kf4').textContent = Imp.toFixed(1)+' kN·s';
+  document.getElementById('kf5').textContent = (sum(D.massratio_arr)/n).toFixed(2);
+  document.getElementById('kf6').textContent = (sum(D.mdot_arr)/n).toFixed(3)+' kg/s';
+
+  /* Header stats */
+  document.getElementById('hs-time').textContent    = tv[tv.length-1].toFixed(1)+' s';
+  document.getElementById('hs-snaps').textContent   = D.regen_times ? D.regen_times.length : '—';
+  document.getElementById('hs-thrust').textContent  = Math.max.apply(null,D.F_arr).toFixed(2)+' kN';
+  document.getElementById('hs-impulse').textContent = Imp.toFixed(1)+' kN·s';
+
+  /* Pressure + tank temp */
+  plt('p-pressure', [
+    tr(tv, D.Pc_arr, 'Pc chamber (MPa)', '#00d4ff'),
+    tr(tv, D.P2_arr, 'P₂ tank (MPa)',    '#a78bfa'),
+    tr(tv, D.T2_arr, 'Sat. temp (K)',     '#ff6b35', 'y2', 'dot'),
+  ], lay({
+    xaxis: {title:{text:'Time (s)'},   gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis: {title:{text:'Pressure (MPa)'},  gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis2:{title:{text:'Tank Temp (K)'},   overlaying:'y', side:'right', gridcolor:'transparent', tickfont:{color:MUTED,family:CFONT,size:10}},
+  }));
+
+  /* Thrust + Isp */
+  plt('p-thrust', [
+    tr(tv, D.F_arr,   'Thrust (kN)', '#34d399'),
+    tr(tv, D.Isp_arr, 'Isp (s)',     '#a78bfa', 'y2', 'dash'),
+  ], lay({
+    xaxis: {title:{text:'Time (s)'},  gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis: {title:{text:'Thrust (kN)'},gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis2:{title:{text:'Isp (s)'},    overlaying:'y', side:'right', gridcolor:'transparent', tickfont:{color:MUTED,family:CFONT,size:10}},
+  }));
+
+  /* Mass flow + O/F */
+  plt('p-massflow', [
+    tr(tv, D.mdot_arr,      'Total ṁ (kg/s)', '#60a5fa'),
+    tr(tv, D.massratio_arr, 'O/F ratio',       '#facc15', 'y2', 'dashdot', 1.5),
+  ], lay({
+    xaxis: {title:{text:'Time (s)'},    gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis: {title:{text:'Mass Flow (kg/s)'},gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis2:{title:{text:'O/F'},          overlaying:'y', side:'right', gridcolor:'transparent', tickfont:{color:MUTED,family:CFONT,size:10}},
+  }));
+
+  /* Vapor quality + cumulative mass */
+  var dt2=tv.length>1?tv[1]-tv[0]:0.1, cm=[0];
+  for (var i=1; i<tv.length; i++) cm.push(cm[i-1]+D.mdot_arr[i-1]*dt2);
+  plt('p-quality', [
+    tr(tv, D.x2_arr, 'Vapor quality x',      '#34d399'),
+    tr(tv, cm,       'Cumulative mass (kg)',  '#ff6b35', 'y2', 'dash'),
+  ], lay({
+    xaxis: {title:{text:'Time (s)'},           gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis: {title:{text:'Vapor Quality x'}, range:[0,1.08], gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis2:{title:{text:'Mass Expelled (kg)'},  overlaying:'y', side:'right', gridcolor:'transparent', tickfont:{color:MUTED,family:CFONT,size:10}},
+  }));
+}
+
+/* ── REGEN (single snapshot) ── */
+function drawRegen() {
+  if (!D || !D.regen_times || !D.regen_times.length) return;
+  var i = snapIdx, z = D.z_array;
+
+  /* KPIs */
+  var Tw=D.Twall_3d[i], Tc=D.Tcool_3d[i], Qf=D.Qflux_3d[i], Hg=D.hg_3d[i], Pc2=D.Pcool_3d[i];
+  var mx=function(a){return Math.max.apply(null,a);}, mn=function(a){return Math.min.apply(null,a);};
+  document.getElementById('kr1').textContent = Math.round(mx(Tw))+' K';
+  document.getElementById('kr2').textContent = Math.round(mx(Tc))+' K';
+  document.getElementById('kr3').textContent = mx(Qf).toFixed(2)+' MW/m²';
+  document.getElementById('kr4').textContent = Math.round(mx(Hg))+' W/m²K';
+  document.getElementById('kr5').textContent = ((Pc2[0]-Pc2[Pc2.length-1])*1000).toFixed(1)+' kPa';
+  document.getElementById('kr6').textContent = (mx(Tc)-mn(Tc)).toFixed(1)+' K';
+
+  /* Header peak stats */
+  var allTw=[].concat.apply([],D.Twall_3d), allQf=[].concat.apply([],D.Qflux_3d);
+  document.getElementById('hs-twall').textContent = Math.round(Math.max.apply(null,allTw))+' K';
+  document.getElementById('hs-qflux').textContent = Math.max.apply(null,allQf).toFixed(2)+' MW/m²';
+
+  var axZ = {title:{text:'Axial position z (m)'}, gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}};
+
+  /* T_wall + T_cool */
+  plt('r-TC', [
+    tr(z, D.Twall_3d[i], 'T_wall (K)', '#f87171'),
+    tr(z, D.Tcool_3d[i], 'T_cool (K)', '#60a5fa', 'y2', 'dash'),
+  ], lay({
+    xaxis: axZ,
+    yaxis: {title:{text:'T_wall (K)'},  gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis2:{title:{text:'T_cool (K)'}, overlaying:'y', side:'right', gridcolor:'transparent', tickfont:{color:MUTED,family:CFONT,size:10}},
+  }));
+
+  /* q" + hg */
+  plt('r-QH', [
+    tr(z, D.Qflux_3d[i], 'q\u2033 (MW/m\u00b2)', '#ff6b35'),
+    tr(z, D.hg_3d[i],    'hg (W/m\u00b2K)',       '#a78bfa', 'y2', 'dash'),
+  ], lay({
+    xaxis: axZ,
+    yaxis: {title:{text:'q\u2033 (MW/m\u00b2)'}, gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis2:{title:{text:'hg (W/m\u00b2K)'},       overlaying:'y', side:'right', gridcolor:'transparent', tickfont:{color:MUTED,family:CFONT,size:10}},
+  }));
+
+  /* P_cool */
+  plt('r-P', [
+    tr(z, D.Pcool_3d[i], 'P_cool (MPa)', '#34d399'),
+  ], lay({
+    xaxis: axZ,
+    yaxis: {title:{text:'P_cool (MPa)'}, gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    margin:{l:62,r:30,t:10,b:72}
+  }));
+}
+
+/* ── TRANSPORT (single snapshot) ── */
+function drawTransport() {
+  if (!D || !D.transport_3d || !D.transport_3d.length) return;
+  var i = snapIdx, z = D.z_array, snap = D.transport_3d[i];
+  var axZ = {title:{text:'Axial position z (m)'}, gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}};
+
+  /* Mach + Cp */
+  plt('tr-MC', [
+    tr(z, snap.map(function(r){return r[5];}), 'Mach',        '#facc15'),
+    tr(z, snap.map(function(r){return r[0];}), 'Cp (J/kg\u00b7K)', '#f87171', 'y2', 'dash'),
+  ], lay({
+    xaxis: axZ,
+    yaxis: {title:{text:'Mach'},          gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis2:{title:{text:'Cp (J/kg\u00b7K)'}, overlaying:'y', side:'right', gridcolor:'transparent', tickfont:{color:MUTED,family:CFONT,size:10}},
+  }));
+
+  /* mu + k */
+  plt('tr-MK', [
+    tr(z, snap.map(function(r){return r[1]*1e5;}), '\u03bc\u00d710\u2075 (Pa\u00b7s)', '#a78bfa'),
+    tr(z, snap.map(function(r){return r[2];}),     'k (W/m\u00b7K)',                   '#34d399', 'y2', 'dash'),
+  ], lay({
+    xaxis: axZ,
+    yaxis: {title:{text:'\u03bc\u00d710\u2075 (Pa\u00b7s)'}, gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis2:{title:{text:'k (W/m\u00b7K)'},                    overlaying:'y', side:'right', gridcolor:'transparent', tickfont:{color:MUTED,family:CFONT,size:10}},
+  }));
+
+  /* Prandtl + gamma */
+  plt('tr-PG', [
+    tr(z, snap.map(function(r){return r[3];}), 'Prandtl', '#60a5fa'),
+    tr(z, snap.map(function(r){return r[4];}), '\u03b3',   '#ff6b35', 'y2', 'dot'),
+  ], lay({
+    xaxis: axZ,
+    yaxis: {title:{text:'Prandtl'},          gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis2:{title:{text:'\u03b3'},            overlaying:'y', side:'right', gridcolor:'transparent', tickfont:{color:MUTED,family:CFONT,size:10}},
+    margin:{l:62,r:62,t:10,b:72}
+  }));
+}
+
+/* ── GAS TEMPERATURES (single snapshot) ── */
+function drawTempsC() {
+  if (!D || !D.tempsC_3d || !D.tempsC_3d.length) return;
+  var i = snapIdx, z = D.z_array, snap = D.tempsC_3d[i];
+  var axZ = {title:{text:'Axial position z (m)'}, gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}};
+  var axT = {title:{text:'Temperature (K)'}, gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}};
+
+  plt('tc-Tr', [tr(z, snap.map(function(r){return r[0];}), 'Recovery T_r (K)', '#f87171')],
+    lay({xaxis:axZ, yaxis:axT, margin:{l:62,r:30,t:10,b:72}}));
+
+  plt('tc-T0', [tr(z, snap.map(function(r){return r[1];}), 'Stagnation T\u2080 (K)', '#ff6b35')],
+    lay({xaxis:axZ, yaxis:axT, margin:{l:62,r:30,t:10,b:72}}));
+
+  plt('tc-comp', [
+    tr(z, snap.map(function(r){return r[0];}), 'T_r recovery',        '#f87171'),
+    tr(z, snap.map(function(r){return r[1];}), 'T\u2080 stagnation',  '#facc15', 'y', 'dash'),
+  ], lay({xaxis:axZ, yaxis:axT, margin:{l:62,r:30,t:10,b:72}}));
+}
+
+/* ── NOZZLE CONTOUR ── */
+function drawNozzle() {
+  if (!D) return;
+  /* Use nozzle_R from JSON if present, else analytic fallback */
+  var z = D.z_array, R;
+  if (D.nozzle_R && D.nozzle_R.length === z.length) {
+    R = D.nozzle_R;
+  } else {
+    var Le=z[z.length-1], Lnoz=Le*0.345, Lconv=Le*0.588;
+    var Rt=0.026, Re=0.054, Rc=0.058;
+    R = z.map(function(zv){
+      if(zv<Lnoz){var t=zv/Lnoz;return Re+(Rt-Re)*(3*t*t-2*t*t*t);}
+      else if(zv<Lconv){var t=(zv-Lnoz)/(Lconv-Lnoz);return Rt+(Rc-Rt)*(3*t*t-2*t*t*t);}
+      else return Rc;
+    });
+  }
+  var throatR = Math.min.apply(null, R);
+  var throatIdx = R.indexOf(throatR);
+
+  plt('p-nozzle', [
+    /* upper wall */
+    {type:'scatter', mode:'lines', x:z, y:R, name:'Wall (+)',
+     line:{color:'#00d4ff',width:2},
+     hovertemplate:'z=%{x:.4f} m  R=%{y:.4f} m<extra></extra>'},
+    /* lower wall with fill between */
+    {type:'scatter', mode:'lines', x:z, y:R.map(function(r){return -r;}),
+     name:'Wall (−)', fill:'tonexty', fillcolor:'rgba(0,212,255,0.06)',
+     line:{color:'#00d4ff',width:2}, showlegend:false,
+     hovertemplate:'z=%{x:.4f} m  R=-%{y:.4f} m<extra></extra>'},
+    /* throat marker upper */
+    {type:'scatter', mode:'markers', x:[z[throatIdx]], y:[throatR],
+     name:'Throat R='+throatR.toFixed(4)+' m',
+     marker:{color:'#ff6b35',size:10,symbol:'diamond'},
+     hovertemplate:'Throat  z=%{x:.4f} m  R=%{y:.4f} m<extra></extra>'},
+    /* throat marker lower */
+    {type:'scatter', mode:'markers', x:[z[throatIdx]], y:[-throatR],
+     showlegend:false, marker:{color:'#ff6b35',size:10,symbol:'diamond'},
+     hovertemplate:'Throat  z=%{x:.4f} m  R=-%{y:.4f} m<extra></extra>'},
+    /* axis line */
+    {type:'scatter', mode:'lines', x:[z[0],z[z.length-1]], y:[0,0],
+     name:'Axis', line:{color:'rgba(255,107,53,0.3)',width:1,dash:'dot'}, hoverinfo:'skip'},
+  ], lay({
+    xaxis: {title:{text:'Axial position z (m)'},
+            gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis: {title:{text:'Radius (m)'},
+            gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10},
+            scaleanchor:'x', scaleratio:1,
+            zeroline:true, zerolinecolor:'rgba(255,107,53,0.25)', zerolinewidth:1},
+    margin:{l:72,r:40,t:14,b:72}
+  }));
+}
+
+/* ── HEAT MAP ── */
+var SUNSET_SCALE = [
+  [0,'#0a0018'],[0.12,'#1A05A2'],[0.32,'#5A0390'],
+  [0.55,'#8F0177'],[0.72,'#DE1A58'],[0.88,'#F67D31'],[1.0,'#FFD080']
+];
+var CMAP_NAMES = {
+  Qflux_3d:'q\u2033 (MW/m\u00b2)', Twall_3d:'T_wall (K)',
+  hg_3d:'hg (W/m\u00b2K)', Tcool_3d:'T_cool (K)', Pcool_3d:'P_cool (MPa)'
+};
+
+function drawContour() {
+  if (!D || !D.regen_times || !D.regen_times.length) return;
+  var metric = document.getElementById('contourMetric').value;
+  var arr = D[metric], z = D.z_array, times = D.regen_times, lbl = CMAP_NAMES[metric];
+  document.getElementById('hmap-title').textContent = lbl + ' \u2014 ' + z.length + ' axial pts \u00d7 ' + times.length + ' snapshots';
+  plt('p-heatmap', [{
+    type:'heatmap', x:z, y:times, z:arr, colorscale:SUNSET_SCALE, showscale:true,
+    colorbar:{tickfont:{color:TEXT,family:CFONT,size:10},
+              title:{text:lbl, font:{color:'#ff6b35',size:11,family:CFONT}, side:'right'},
+              bordercolor:GRID, bgcolor:'rgba(10,0,22,0.75)'},
+    hovertemplate:'z=%{x:.4f} m<br>t=%{y:.2f} s<br>%{z:.4g}<extra></extra>'}
+  ], lay({
+    xaxis: {title:{text:'Axial position z (m)'}, gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    yaxis: {title:{text:'Time (s)'},              gridcolor:GRID, tickfont:{color:MUTED,family:CFONT,size:10}},
+    shapes:[{type:'line',
+      x0:z[0],x1:z[z.length-1],y0:times[snapIdx],y1:times[snapIdx],
+      line:{color:'rgba(0,212,255,0.75)',width:2,dash:'dot'},xref:'x',yref:'y'}],
+    margin:{l:62,r:100,t:14,b:72}
+  }));
 }
 
 /* ── SNAPSHOT UPDATE ── */
-function setSnap(i){
+function setSnap(i) {
   snapIdx = i;
-  document.getElementById('snapSlider').value = i;
-  document.querySelectorAll('.snap-btn').forEach(function(b,ci){ b.classList.toggle('active', ci===i); });
+  document.querySelectorAll('.snap-btn').forEach(function(b,ci){b.classList.toggle('active',ci===i);});
   updateSnap();
 }
 
-function updateSnap(){
-  if(!D || !D.regen_times || D.regen_times.length===0) return;
-  var i=snapIdx, t=D.regen_times[i], z=D.z_array;
-  document.getElementById('snapVal').textContent = t.toFixed(2);
-  // per-snapshot charts
-  if(!charts['rTwall']){ mkChart('rTwall'); mkChart('rTcool'); mkChart('rHg'); mkChart('rPcool'); mkChart('rQsnap'); }
-  setChartData('rTwall', [ds(z,D.Twall_3d[i],'#e87070')]);
-  setChartData('rTcool', [ds(z,D.Tcool_3d[i],'#6ab8ff')]);
-  setChartData('rHg',    [ds(z,D.hg_3d[i],'#38d4e8')]);
-  setChartData('rPcool', [ds(z,D.Pcool_3d[i],'#2c8fe8')]);
-  setChartData('rQsnap', [ds(z,D.Qflux_3d[i],'#f5a623')]);
-  // KPIs
-  var Tw=D.Twall_3d[i], Tc=D.Tcool_3d[i], Qf=D.Qflux_3d[i], Hg=D.hg_3d[i], Pc=D.Pcool_3d[i];
-  document.getElementById('k1').textContent = Math.round(Math.max.apply(null,Tw))+' K';
-  document.getElementById('k2').textContent = Math.round(Math.max.apply(null,Tc))+' K';
-  document.getElementById('k3').textContent = Math.max.apply(null,Qf).toFixed(2)+' MW';
-  document.getElementById('k4').textContent = Math.round(Math.max.apply(null,Hg))+' W/m²K';
-  document.getElementById('k5').textContent = ((Pc[0]-Pc[Pc.length-1])*1000).toFixed(0)+' kPa';
-  document.getElementById('k6').textContent = (Math.max.apply(null,Tc)-Math.min.apply(null,Tc)).toFixed(1)+' K';
-  drawContour();
-  if(document.getElementById('tab-table').classList.contains('active')) buildTable();
-  if(document.getElementById('tab-tempsC').classList.contains('active')) buildTempsCSnap();
-}
-
-/* ── CONTOUR ── */
-function heatCol(t){
-  var stops=[[0,[6,21,40]],[0.25,[20,72,184]],[0.5,[56,212,232]],[0.75,[245,166,35]],[1,[232,68,68]]];
-  for(var s=0;s<stops.length-1;s++){
-    var t0=stops[s][0],c0=stops[s][1],t1=stops[s+1][0],c1=stops[s+1][1];
-    if(t>=t0&&t<=t1){var f=(t-t0)/(t1-t0);return [Math.round(c0[0]+(c1[0]-c0[0])*f),Math.round(c0[1]+(c1[1]-c0[1])*f),Math.round(c0[2]+(c1[2]-c0[2])*f)];}
-  }
-  return [232,68,68];
-}
-
-function drawContour(){
-  if(!D||!D.regen_times||D.regen_times.length===0) return;
-  var metric = document.getElementById('contourMetric').value;
-  var arr = D[metric];
-  var canvas = document.getElementById('contourCanvas');
-  var dpr = window.devicePixelRatio||1;
-  canvas.width = (canvas.offsetWidth||700)*dpr;
-  canvas.height = 110*dpr;
-  var W=canvas.width, H=canvas.height;
-  var nSnap=arr.length, nZ=arr[0].length;
-  var flat=arr.reduce(function(a,b){return a.concat(b);},[]);
-  var mn=Math.min.apply(null,flat), mx=Math.max.apply(null,flat);
-  var ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,W,H);
-  var cw=W/nZ, ch=H/nSnap;
-  for(var si=0;si<nSnap;si++){
-    for(var zi=0;zi<nZ;zi++){
-      var v=arr[si][zi];
-      var t=mx>mn?(v-mn)/(mx-mn):0;
-      var c=heatCol(t);
-      ctx.fillStyle='rgb('+c[0]+','+c[1]+','+c[2]+')';
-      ctx.fillRect(zi*cw, si*ch, Math.ceil(cw)+1, Math.ceil(ch)+1);
-    }
-  }
-  // snapshot line
-  var ly=(snapIdx/(Math.max(nSnap-1,1)))*H;
-  ctx.strokeStyle='rgba(255,255,255,0.65)';
-  ctx.lineWidth=1.5*dpr;
-  ctx.setLineDash([5*dpr,3*dpr]);
-  ctx.beginPath();ctx.moveTo(0,ly);ctx.lineTo(W,ly);ctx.stroke();
-  ctx.setLineDash([]);
-  // axis tick labels
-  ctx.fillStyle='#f5a623';
-  ctx.font=(9*dpr)+'px Courier New';
-  ctx.fillText((D.z_array[0]).toFixed(3)+'m',4,H-4);
-  var rl=(D.z_array[nZ-1]).toFixed(3)+'m';
-  ctx.fillText(rl, W-rl.length*6*dpr, H-4);
-  // colorbar
-  var names={Qflux_3d:'q″ MW/m²',Twall_3d:'T_wall K',hg_3d:'hg W/m²K',Tcool_3d:'T_cool K',Pcool_3d:'P_cool MPa'};
-  document.getElementById('cbMin').textContent = mn.toFixed(2);
-  document.getElementById('cbMax').textContent = mx.toFixed(2)+' ('+names[metric]+')';
-  document.getElementById('contourTitle').style.color='#cce0ff'; document.getElementById('contourTitle').textContent = names[metric]+' map — '+nZ+' axial pts × '+nSnap+' time snapshots';
-}
-
-/* ── TABLE ── */
-function buildTable(){
-  if(!D) return;
-  var mode = document.getElementById('tableMode').value;
-  var head='', rows='';
-  if(mode==='regen'){
-    var i=snapIdx, z=D.z_array;
-    var Tw=D.Twall_3d[i], Tc=D.Tcool_3d[i], Pc=D.Pcool_3d[i], Hg=D.hg_3d[i], Qf=D.Qflux_3d[i];
-    head='<tr><th>z (m)</th><th>T_wall (K)</th><th>T_cool (K)</th><th>P_cool (MPa)</th><th>hg (W/m²K)</th><th>q″ (MW/m²)</th></tr>';
-    var step=Math.max(1,Math.floor(z.length/80));
-    for(var j=0;j<z.length;j+=step){
-      rows+='<tr><td>'+z[j].toFixed(5)+'</td><td>'+Tw[j].toFixed(1)+'</td><td>'+Tc[j].toFixed(1)+'</td><td>'+Pc[j].toFixed(4)+'</td><td>'+Hg[j].toFixed(0)+'</td><td>'+Qf[j].toFixed(4)+'</td></tr>';
-    }
-  } else {
-    head='<tr><th>t (s)</th><th>Thrust (kN)</th><th>Isp (s)</th><th>Pc (MPa)</th><th>P_tank (MPa)</th><th>T_tank (K)</th><th>mdot (kg/s)</th><th>O/F</th><th>x</th></tr>';
-    var tv=D.timevec, step=Math.max(1,Math.floor(tv.length/80));
-    for(var j=0;j<tv.length;j+=step){
-      rows+='<tr><td>'+tv[j].toFixed(3)+'</td><td>'+D.F_arr[j].toFixed(3)+'</td><td>'+D.Isp_arr[j].toFixed(1)+'</td><td>'+D.Pc_arr[j].toFixed(1)+'</td><td>'+D.P2_arr[j].toFixed(1)+'</td><td>'+D.T2_arr[j].toFixed(2)+'</td><td>'+D.mdot_arr[j].toFixed(4)+'</td><td>'+D.massratio_arr[j].toFixed(3)+'</td><td>'+D.x2_arr[j].toFixed(4)+'</td></tr>';
-    }
-  }
-  document.getElementById('tHead').innerHTML = head;
-  document.getElementById('tBody').innerHTML = rows;
-}
-
-
-/* ── TRANSPORT PROPERTIES ── */
-function buildTransportCharts(){
-  if(!D || !D.transport_3d || D.transport_3d.length===0) return;
-  var ids = ['trMach','trCp','trMu','trK','trPr','trGamma'];
-  var cols = ['#38d4e8','#f5a623','#b07cff','#30d890','#6ab8ff','#e87070'];
-  ids.forEach(function(id,i){
-    mkMultiLegend(id,'z (m)');
+function updateSnap() {
+  if (!D || !D.regen_times || !D.regen_times.length) return;
+  var t = D.regen_times[snapIdx], lbl = 't = '+t.toFixed(2)+' s';
+  ['regen-t','trans-t','tc-t'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.textContent = lbl;
   });
-  var z = D.z_array;
-  var times = D.regen_times;
-  // transport_3d[snap][z_idx][prop_idx]  props: Cp,mu,k,Pr,gamma,Mach
-  var propIdx = {trCp:0, trMu:1, trK:2, trPr:3, trGamma:4, trMach:5};
-  ids.forEach(function(id){
-    var pi = propIdx[id];
-    var datasets = times.map(function(t,si){
-      var c = PAL_SNAP[si % PAL_SNAP.length];
-      var yArr = D.transport_3d[si].map(function(row){ return row[pi]; });
-      return ds(z, yArr, c, 't='+t.toFixed(2)+'s');
-    });
-    setChartData(id, datasets);
-  });
+  drawRegen();
+  if (D.transport_3d && D.transport_3d.length) drawTransport();
+  if (D.tempsC_3d && D.tempsC_3d.length) drawTempsC();
+  if (_drawn['p-heatmap']) drawContour();
 }
 
-function showTransportCharts(){
-  if(!D || !D.transport_3d || D.transport_3d.length===0){
-    show('noTransport'); hide('transportCharts'); return;
-  }
-  hide('noTransport'); show('transportCharts');
-  buildTransportCharts();
+/* ── TAB SWITCHING ── */
+var _tabDrawn = {};
+function showTab(name, btn) {
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('visible');});
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  hide('view-nodata');
+  var el = document.getElementById('view-'+name);
+  if (el) { el.classList.add('visible'); }
+  if (btn) btn.classList.add('active');
+  /* Lazy-draw and resize */
+  setTimeout(function(){
+    if (D) {
+      if (name==='contour' && !_tabDrawn['contour']) { drawContour(); _tabDrawn['contour']=true; }
+      document.querySelectorAll('#view-'+name+' .pbox').forEach(function(div){
+        if (_drawn[div.id]) Plotly.Plots.resize(div.id);
+      });
+    }
+  }, 60);
 }
 
-
-/* ── GAS TEMPERATURES (TempsC) ── */
-function buildTempsCCharts(){
-  if(!D || !D.tempsC_3d || D.tempsC_3d.length===0) return;
-  var z = D.z_array;
-  var times = D.regen_times;
-
-  mkMultiLegend('tcTr','z (m)');
-  mkMultiLegend('tcT0','z (m)');
-
-  var dsTr=[], dsT0=[];
-  times.forEach(function(t,si){
-    var c = PAL_SNAP[si % PAL_SNAP.length];
-    var lbl = 't='+t.toFixed(2)+'s';
-    var Tr_arr = D.tempsC_3d[si].map(function(row){ return row[0]; });
-    var T0_arr = D.tempsC_3d[si].map(function(row){ return row[1]; });
-    dsTr.push(ds(z, Tr_arr, c, lbl));
-    dsT0.push(ds(z, T0_arr, c, lbl));
-  });
-  setChartData('tcTr', dsTr);
-  setChartData('tcT0', dsT0);
-
-  buildTempsCSnap();
-}
-
-function buildTempsCSnap(){
-  if(!D || !D.tempsC_3d || D.tempsC_3d.length===0) return;
-  mkMultiLegend('tcComp','z (m)');
-  var z = D.z_array;
-  var i = snapIdx;
-  var t = D.regen_times[i];
-  var Tr_arr = D.tempsC_3d[i].map(function(row){ return row[0]; });
-  var T0_arr = D.tempsC_3d[i].map(function(row){ return row[1]; });
-  setChartData('tcComp',[
-    ds(z, Tr_arr, '#ff4466', 'T_r (recovery) t='+t.toFixed(2)+'s'),
-    ds(z, T0_arr, '#f5a623', 'T_0 (stagnation) t='+t.toFixed(2)+'s')
-  ]);
-}
-
-function showTempsCCharts(){
-  if(!D || !D.tempsC_3d || D.tempsC_3d.length===0){
-    show('noTempsC'); hide('tempsCCharts'); return;
-  }
-  hide('noTempsC'); show('tempsCCharts');
-  buildTempsCCharts();
-}
-
-/* __ TABS __ */
-function switchTab(name, el){
-  document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
-  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
-  el.classList.add('active');
-  document.getElementById('tab-'+name).classList.add('active');
-  if(name==='contour'&&D) drawContour();
-  if(name==='table'&&D) buildTable();
-  if(name==='transport'&&D) showTransportCharts();
-  if(name==='tempsC'&&D) showTempsCCharts();
-}
-
-/* ── HELPERS ── */
 function show(id){var e=document.getElementById(id);if(e)e.style.display='';}
 function hide(id){var e=document.getElementById(id);if(e)e.style.display='none';}
-window.addEventListener('resize',function(){if(D)drawContour();});
 
-/* ── AUTO-LOAD injected data (set by Python export) ── */
-if(typeof AUTOLOAD !== 'undefined'){ D = AUTOLOAD; applyData(); }
+window.addEventListener('resize', function(){
+  if (!D) return;
+  Object.keys(_drawn).forEach(function(id){
+    var el=document.getElementById(id);
+    if(el && el.offsetParent!==null) Plotly.Plots.resize(id);
+  });
+});
+
+/* ── AUTOLOAD (Python injection) ── */
+if (typeof AUTOLOAD !== 'undefined') { D = AUTOLOAD; applyData(); showTab('feed',document.querySelector('.tab')); }
 </script>
 </body>
 </html>

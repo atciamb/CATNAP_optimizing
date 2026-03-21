@@ -56,15 +56,15 @@ plt.style.use('dark_background')
 
 Ethoxide = Props_obj('N2O','ETHANOL','N2O','ETHANOL')
 
-Pintle = Injector_obj(0.65,0.55,0.65,30,20,20,2.533e-3,1.240e-3,0.480e-3,Ethoxide)
+Pintle = Injector_obj(0.65,0.55,0.65,25,20,20,2.533e-3,1.240e-3,0.480e-3,Ethoxide)
 
-mdotcoolinput = 0.81
+mdotcoolinput = 1.81
 
 
 
 simtime = 25 #seconds
 
-numsteps = 300
+numsteps = 150
 
 dt = simtime/numsteps
 
@@ -198,7 +198,7 @@ def R(z):
     return R
 
 
-Altair = Regen_obj(1.5e-3,1e-3,1.5e-3,R,Rthroat,0.0254,90,Ethoxide.fuel,110,15e-6,80,Le)
+Altair = Regen_obj(1.5e-3,1e-3,1.5e-3,R,Rthroat,0.0254,90,Ethoxide.fuel,237,15e-6,80,Le,35)
 
 ######################################
 
@@ -501,9 +501,10 @@ Pc_init = 340*6895 #psi
 def CATNAP(Tinit, mdotox, mdotf, mdotfilm, x1, dt, m1,
            Regen_obj, Injector_obj, Props_obj,
            regen_times=None,         
-           mdot_coolant=None,     
-           Tcool_init=170, Pcool_init=4e6, 
+           Tcool_init=290,
            regen=True, plot=True):
+    
+    mdot_coolant = mdotf + mdotfilm
 
     Pressurant = Props_obj.ox
 
@@ -591,9 +592,16 @@ def CATNAP(Tinit, mdotox, mdotf, mdotfilm, x1, dt, m1,
             
             P2f = P2 - (dP_piston_psi*6894.75729)
 
-            mdotf = Injector_obj.mdot_fuel(P2f,T2,Pc)
+            dPchannels = Regen_obj.dP_channel_Approx(Tcool_init,P2f,mdot_coolant)
 
-            mdotfilm = Injector_obj.mdot_film(P2f,T2,Pc)
+            P2inj = P2f - dPchannels
+
+            mdotf = Injector_obj.mdot_fuel(P2inj,T2,Pc)
+
+            mdotfilm = Injector_obj.mdot_film(P2inj,T2,Pc)
+
+            if P2inj < Pc*1.1:
+                raise Warning('Injector Stiffness Below 10%! Instability Probable')
             
             mdot_total = mdotox + mdotf + mdotfilm
             
@@ -611,23 +619,25 @@ def CATNAP(Tinit, mdotox, mdotf, mdotfilm, x1, dt, m1,
 
             if i in regen_index_map and mdot_coolant is not None:
                 Trn = Transport_obj(mdot_total, massratio, Athroat, Props_obj, geom, eps, Pc)
-                Tc_arr, Pc_snap, hg_arr, Tw_arr, Qf_arr = \
-                    Regen_obj.SOLVE_REGEN(mdot_coolant, Tcool_init, Pcool_init, Trn)
+
+                Pcool_init = P2f
+
+                Tc_arr, Pc_snap, hg_arr, Tw_arr, Qf_arr = Regen_obj.SOLVE_REGEN(mdot_coolant, Tcool_init, Pcool_init, Trn)
                 
                 
                 Trn = Transport_obj(mdot_total, massratio, Athroat, Props_obj, geom, eps, Pc)
                 
-                # existing regen solve...
+                
                 Tc_arr, Pc_snap, hg_arr, Tw_arr, Qf_arr = \
                     Regen_obj.SOLVE_REGEN(mdot_coolant, Tcool_init, Pcool_init, Trn)
                 
-                # ADD: grab transport properties along z_array at this snapshot
+                
                 z_arr = Regen_obj.z_array
                 Cp_t, mu_t, k_t, Pr_t, gamma_t = Trn.Chambertransport()
                 MachF = lambda z: Trn.Mach(z, Regen_obj.R)
                 trans_snap = np.array([[float(Cp_t(z)), float(mu_t(z)), float(k_t(z)),
                                         float(Pr_t(z)), float(gamma_t(z)), float(MachF(z))]
-                                    for z in z_arr])  # shape (numz, 6)
+                                    for z in z_arr])  
                 transport_3d.append(trans_snap.tolist())
 
                 TempsC, _, _, _ = Trn.TPRhostag()
@@ -648,7 +658,7 @@ def CATNAP(Tinit, mdotox, mdotf, mdotfilm, x1, dt, m1,
 
             Trn = Transport_obj(mdot_total,massratio,Athroat,Props_obj,geom,eps,Pc_init)
 
-            Cptransport, viscositytransport, thermalcondtransport, prantltransport, gammatransport = Trn.Chambertransport()
+            
             
             Pc_arr.append(Pc)
             P2_arr.append(P2)
@@ -808,8 +818,7 @@ def CATNAP(Tinit, mdotox, mdotf, mdotfilm, x1, dt, m1,
 
 (Pc_arr, P2_arr, T2_arr, x2_arr, F_arr, Isp_arr, mdot_arr, massratio_arr,
  regen_times, Tcool_3d, Pcool_3d, hg_3d, Twall_3d, Qflux_3d,transport_3d,tempsC_3d) = CATNAP(290,2.548,0.784,0.118,0.01,dt,54,Altair,Pintle,Ethoxide,regen_times=np.linspace(0.5,18,7),         
-                                                                                                        mdot_coolant=mdotcoolinput,     
-                                                                                                        Tcool_init=290, Pcool_init=3.7921e6, 
+                                                                                                        Tcool_init=290, 
                                                                                                         regen=True, plot=True)
 
 
@@ -844,18 +853,23 @@ regen_results = {
     'Twall_3d':      Twall_3d.tolist(),
     'Qflux_3d':      Qflux_3d.tolist(),
     'transport_3d': transport_3d,
-    'tempsC_3d': tempsC_3d
+    'tempsC_3d': tempsC_3d,
+    'nozzle_R': [float(R(zi)) for zi in Altair.z_array]
 }
 
 # Inject data into dashboard and write self-contained HTML
-with open('catnap_dashboard.html', 'r') as f:
+
+with open('catnap_dashboard.html', 'r', encoding='utf-8') as f:
     html = f.read()
 
 inject = '<script>var AUTOLOAD = ' + json.dumps(regen_results) + ';</script>'
 html = html.replace('</head>', inject + '\n</head>')
 
+
+
 output_path = os.path.abspath('catnap_results.html')
-with open(output_path, 'w') as f:
+
+with open(output_path, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print(f'Dashboard exported to {output_path}')

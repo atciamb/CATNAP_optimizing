@@ -306,7 +306,9 @@ def RectStress(z,twall,Q,Rwall):
 
 
 class Regen_obj:
-    def __init__(self, twall, lfmin, wcmin,R, Rthroat, throat_radcurv, numchannels, coolant, k_chamber, epsilon_rough,numpts_z,enginelength):
+    def __init__(self, twall, lfmin, wcmin,R, Rthroat, throat_radcurv, numchannels, coolant, k_chamber, epsilon_rough,numpts_z,enginelength,genangle):
+
+        self.genrad = (genangle)*pi/180
         
         self.twall = twall
         self.R = R #function R(z)
@@ -319,12 +321,12 @@ class Regen_obj:
         self.numpts_z = numpts_z
         self.channelheight, self.channelwidth, self.trib = RegenGeom(lfmin,wcmin,Rthroat,numchannels,twall,R)
         self.z_array = np.linspace(0,enginelength,numpts_z)
-        self.dz = enginelength/numpts_z
+        self.dz = (enginelength/numpts_z)/np.cos(self.genrad)
 
     
 
 
-    def BalanceEnth(self,z,mdot_coolant,T1,P1,Transport_obj,Correlation_flag='DB'):
+    def BalanceEnth(self,z,mdot_coolant,T1,P1,Transport_obj,Correlation_flag='Gneil'):
 
         MachArea = lambda z: Transport_obj.Mach(z, self.R)
 
@@ -402,6 +404,25 @@ class Regen_obj:
         return Tcool_array, Pcool_array
 
         '''
+    
+    def dP_channel_Approx(self,Tc_init,Pcool_init,mdot_coolant):
+
+        #NOTE: Do not use for normal regen circuit calculation, this loop approximates regen channel loss
+        # without accounting for small changes in coolant properties due to temperature. Meant to be used 
+        # outside of snapshot loop
+
+        P1 = Pcool_init
+        
+        for i,z1 in enumerate(self.z_array):
+            mdotchannel = mdot_coolant / self.numchannels
+
+            P2 = P1 + self.DeltaPstep(z1,Tc_init,P1,mdot_coolant)
+
+            z1 = z1 + self.dz
+
+            P1 = P2
+
+        return P2 - Pcool_init
     
 
     def SOLVE_REGEN(self, mdot_coolant, Tcool_init, Pcool_init, Transport_obj):
