@@ -61,7 +61,6 @@ Pintle = Injector_obj(0.65,0.55,0.65,25,20,20,2.533e-3,1.240e-3,0.480e-3,Ethoxid
 mdotcoolinput = 1.81
 
 
-
 simtime = 25 #seconds
 
 numsteps = 150
@@ -87,9 +86,6 @@ mdot_target = 3.40194 #kg/s
 C = CEA_Obj(oxName='N2O', fuelName='ETHANOL')
 
 plotchannel = True
-
-
-
 
 coolant = Ethoxide.fuel
 
@@ -265,73 +261,6 @@ epsilon = 1e-3
 plot = True
 
 
-# THRUST CHAMBER MATERIAL PROPERTIES
-Chamber_k = 350  # Chamber material thermal conductivity in W/(m*K)
-
-
-
-# # Gas properties throughout TCA
-
-# T_known = np.array([1086.7499, 1975.7020, 2224.1329, 2226.3701])
-# cp_known = np.array([2.9881e3, 2.7191e3, 2.8082e3, 2.8090e3])
-# rho_known = np.array([0.1681, 0.9754, 2.6424, 2.6480])
-# mu_known = np.array([4.354e-5, 6.587e-5, 7.162e-5, 7.167e-5])
-# k_known = np.array([0.201, 0.3214, 0.3568, 0.3841])
-# Pr_known = np.array([0.5153, 0.5390, 0.5242, 0.5241])
-# Mach_known = np.array([2.8585,1.0,0.0898,0.000])
-
-# RPApts = np.array([0.0,Lnozzle/39.3700787,(Lnozzle + Lcon1 + Lcon2)/39.3700787,(Lnozzle + Lcon1 + Lcon2 + Lcham)/39.3700787])
-
-# Tgas = PchipInterpolator(RPApts,T_known)
-# cpgas = PchipInterpolator(RPApts,cp_known)
-# rhogas = PchipInterpolator(RPApts,rho_known)
-# mugas = PchipInterpolator(RPApts,mu_known)
-# kgas = PchipInterpolator(RPApts,k_known)
-# Prgas = PchipInterpolator(RPApts,Pr_known)
-# Machgas = PchipInterpolator(RPApts,Mach_known)
-
-
-# CP_gas_array = cpgas(z)  # Effective specific heat in J/(kg*K)
-# Gamma_gas = 1.249  # Exhaust specific heat ratio
-# Temperature_gas_array = Tgas(z)  # Temperature in K
-# Thermal_conductivity_gas_array = kgas(z)  # Exhaust effective thermal conductivity in W/(m*k)
-# Viscosity_gas_array = mugas(z)  # Viscosity in kg/(m*s) aka Pa*s
-# Prantl_gas_array = Prgas(z) # Exhaust effective Prantl number
-# Density_gas_array = rhogas(z)  # exhaust density in kg/m^3
-# Mach_gas_array = Machgas(z) # Mach number, dimensionless
-
-
-# plt.figure(figsize=(10, 6))
-# plt.plot(z, CP_gas_array, label='Cp (J/kg*K)', color='blue', linewidth=2)
-# plt.plot(z, Temperature_gas_array, label='Temperature (K)', color='red', linewidth=2)
-# ### Cp and temp plots
-# plt.xlabel('Axial position (m)', fontsize=14)
-# plt.ylabel('Cp / Temperature', fontsize=14)
-# plt.title('Specific Heat and Temperature Along Engine Axis', fontsize=16)
-# plt.grid(True, linestyle='--', alpha=0.5)
-# plt.legend(loc='best', fontsize=12)
-# plt.tight_layout()
-# plt.show()
-
-# wid2 = 3
-# # Other property plots
-# plt.figure(figsize=(10, 6))
-# plt.plot(z, Thermal_conductivity_gas_array, label='Thermal Conductivity (W/m*K)', color='green', linewidth=wid2)
-# plt.plot(z, Viscosity_gas_array, label='Viscosity (Pa*s)', color='orange', linewidth=wid2)
-# plt.plot(z, Prantl_gas_array, label='Prandtl Number', color='purple', linewidth=wid2)
-# plt.plot(z, Density_gas_array, label='Density (kg/m³)', color='royalblue', linewidth=wid2)
-# plt.plot(z, Mach_gas_array, label='Mach Number', color='salmon', linewidth=wid2)
-
-
-# plt.xlabel('Axial position (m)', fontsize=14)
-# plt.ylabel('Gas Properties', fontsize=14)
-# plt.title('Gas Properties Along Engine Axis', fontsize=16)
-# plt.grid(True, linestyle='--', alpha=0.5)
-# plt.legend(loc='best', fontsize=12)
-# plt.tight_layout()
-# plt.show()
-
-
 
 
 Pc_arr       = []
@@ -341,10 +270,6 @@ x2_arr       = []
 F_arr        = []
 Isp_arr      = []
 mdot_arr     = []
-
-
-
-
 
 
 
@@ -488,37 +413,41 @@ def rootT2(T2,v2,u2,Pressurant):
     return u2 - uf - x2*(ug - uf)
 
 
-
-
-
-
-
 ######################################
 
 
 Pc_init = 340*6895 #psi
 
-def CATNAP(Tinit, mdotox, mdotf, mdotfilm, x1, dt, m1,
+def CATNAP(Tinit, x1, dt, m1,
            Regen_obj, Injector_obj, Props_obj,
            regen_times=None,         
            Tcool_init=290,
            regen=True, plot=True):
     
-    mdot_coolant = mdotf + mdotfilm
 
     Pressurant = Props_obj.ox
 
     Fuel = Props_obj.fuel
     
     T1 = Tinit
-    
-    mdot_total = mdotox + mdotf + mdotfilm
-    
-    MR = mdotox/(mdotf + mdotfilm)
 
     Rthroat = Regen_obj.Rthroat
 
     At = pi*(Rthroat**2)
+
+    Pvap_init = CP.PropsSI('P','T',T1,'Q',0,Props_obj.ox)
+
+    mdotf = Injector_obj.mdot_fuel(Pvap_init - dP_piston_psi*6894.75729,T1,P_amb)
+
+    mdotfilm = Injector_obj.mdot_film(Pvap_init - dP_piston_psi*6894.75729,T1,P_amb)
+
+    mdotox = Injector_obj.mdot_ox_nhne(Pvap_init,T1,P_amb)
+
+    mdot_coolant = mdotf + mdotfilm
+    
+    mdot_total = mdotox + mdotf + mdotfilm
+    
+    MR = mdotox/(mdotf + mdotfilm)
     
     Pc = SolvePC(mdot_total, MR, At, Pc_init, Props_obj)
 
@@ -569,8 +498,6 @@ def CATNAP(Tinit, mdotox, mdotf, mdotfilm, x1, dt, m1,
             #######################
             
             Vapinit = CP.PropsSI('P','T',T_init,'Q',0,Injector_obj.ox)
-
-            D_fuel_init = CP.PropsSI('D','T',T_init,'P',Vapinit,Injector_obj.fuel)
 
 
             T2,x2,m2,v2,phase = timestep(T1,mdotox,mdotf,x1,dt,m1,v1,Props_obj)
@@ -625,6 +552,7 @@ def CATNAP(Tinit, mdotox, mdotf, mdotfilm, x1, dt, m1,
                 Tc_arr, Pc_snap, hg_arr, Tw_arr, Qf_arr = Regen_obj.SOLVE_REGEN(mdot_coolant, Tcool_init, Pcool_init, Trn)
                 
                 
+
                 Trn = Transport_obj(mdot_total, massratio, Athroat, Props_obj, geom, eps, Pc)
                 
                 
@@ -817,9 +745,10 @@ def CATNAP(Tinit, mdotox, mdotf, mdotfilm, x1, dt, m1,
 
 
 (Pc_arr, P2_arr, T2_arr, x2_arr, F_arr, Isp_arr, mdot_arr, massratio_arr,
- regen_times, Tcool_3d, Pcool_3d, hg_3d, Twall_3d, Qflux_3d,transport_3d,tempsC_3d) = CATNAP(290,2.548,0.784,0.118,0.01,dt,54,Altair,Pintle,Ethoxide,regen_times=np.linspace(0.5,18,7),         
+ regen_times, Tcool_3d, Pcool_3d, hg_3d, Twall_3d, Qflux_3d,transport_3d,tempsC_3d) = CATNAP(290,0.01,dt,54,Altair,Pintle,Ethoxide,regen_times=np.linspace(0.5,18,7),         
                                                                                                         Tcool_init=290, 
                                                                                                         regen=True, plot=True)
+
 
 
     

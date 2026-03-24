@@ -9,7 +9,6 @@ Created on Thu Mar 12 18:28:24 2026
 
 import numpy as np
 import CoolProp.CoolProp as CP
-from scipy.interpolate import PchipInterpolator
 import matplotlib.pyplot as plt
 import math
 from math import pi, tan
@@ -140,19 +139,7 @@ class Injector_obj:
 
         return mdot
         
-        
-    
 
-
-
-    
-#############################################
-
-# Written by: Claude (AI Slop)
-
-# Reviewed by: Maximilian Slavik
-
-############### Isentropic Orifice Flow (Vapor Stage)
 
 def mdot_vapor_orifice(P1, T1, P2, Cd, N_holes, A_inj, fluid='N2O'):
     """
@@ -199,15 +186,6 @@ def mdot_vapor_orifice(P1, T1, P2, Cd, N_holes, A_inj, fluid='N2O'):
         )
 
     return mdot
-
-########################################################
-
-############### Isentropic Nozzle #####################
-
-
-# Written by: Claude (AI Slop)
-
-# Reviewed by: Maximilian Slavik
 
 def nozzle(mdot, gamma, R_spec, Tc, A_t, A_e, P_amb):
     """
