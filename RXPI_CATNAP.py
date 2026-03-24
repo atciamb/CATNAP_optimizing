@@ -87,9 +87,6 @@ C = CEA_Obj(oxName='N2O', fuelName='ETHANOL')
 
 plotchannel = True
 
-
-
-
 coolant = Ethoxide.fuel
 
 Engine_name = 'Altair'
@@ -264,9 +261,6 @@ epsilon = 1e-3
 plot = True
 
 
-# THRUST CHAMBER MATERIAL PROPERTIES
-Chamber_k = 350  # Chamber material thermal conductivity in W/(m*K)
-
 
 
 Pc_arr       = []
@@ -419,11 +413,6 @@ def rootT2(T2,v2,u2,Pressurant):
     return u2 - uf - x2*(ug - uf)
 
 
-
-
-
-
-
 ######################################
 
 
@@ -510,7 +499,7 @@ def CATNAP(Tinit, x1, dt, m1,
             
             Vapinit = CP.PropsSI('P','T',T_init,'Q',0,Injector_obj.ox)
 
-            
+
             T2,x2,m2,v2,phase = timestep(T1,mdotox,mdotf,x1,dt,m1,v1,Props_obj)
         
             if phase == 'saturated':

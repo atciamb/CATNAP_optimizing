@@ -9,7 +9,6 @@ Created on Thu Mar 12 18:28:24 2026
 
 import numpy as np
 import CoolProp.CoolProp as CP
-from scipy.interpolate import PchipInterpolator
 import matplotlib.pyplot as plt
 import math
 from math import pi, tan
