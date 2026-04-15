@@ -616,22 +616,15 @@ def CATNAP(Tinit, x1, dt, m1,
 
     ####### Mass Flow Rate and Thrust Data
 
-    mdot_oxarr = np.zeros(numsteps)
+    massratio_arr_np = np.asarray(massratio_arr)
+    mdot_arr_np = np.asarray(mdot_arr)
+    F_arr_np = np.asarray(F_arr)
 
-    mdot_fuelarr = np.zeros(numsteps)
-
-    for i in range(numsteps):
-        factor = massratio_arr[i]/(1 + massratio_arr[i])
-        mdot_oxarr[i] = factor*mdot_arr[i]
-        mdot_fuelarr[i] = (1-factor)*mdot_arr[i]
+    factor = massratio_arr_np / (1 + massratio_arr_np)
+    mdot_oxarr = factor * mdot_arr_np
+    mdot_fuelarr = (1 - factor) * mdot_arr_np
         
-        
-    Imp = 0    
-        
-    for i in range(numsteps - 1):
-        trap = 0.5*(F_arr[i] + F_arr[i+1])*dt
-        
-        Imp += trap
+    Imp = np.trapz(F_arr_np, dx=dt)
 
 
         

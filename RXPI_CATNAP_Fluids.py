@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import math
 from math import pi, tan
 from scipy.optimize import brentq
+from numba import njit
 
 
 ################ NHNE Modeling Function ###############
@@ -22,8 +23,37 @@ from scipy.optimize import brentq
 
 ##### Reviewed by: Maximilian Slavik, Andrew Ciambella
     
+@njit(cache=True)
 def clamp(x, lo, hi):
     return max(lo, min(hi, x))
+
+@njit(cache=True)
+def _mdot_spi_hem_nhne_math(P1, P2, Cd, Ainj, rho1, Pv1, h1, h2, hf, hg, rhof, rhog, k_override):
+    dP = max(P1 - P2, 0.0)
+    mdot_spi = Cd * Ainj * math.sqrt(2.0 * rho1 * dP)
+
+    if Pv1 <= P2:
+        return mdot_spi
+
+    tiny = 1e-12
+    x2 = (h2 - hf) / max(hg - hf, tiny)
+    x2 = clamp(x2, 0.0, 1.0)
+
+    if x2 > 0:
+        rho2 = 1.0 / (x2 / rhog + (1.0 - x2) / rhof)
+    else:
+        rho2 = rhof
+
+    dh = max(h1 - h2, 0.0)
+    mdot_hem = Cd * Ainj * rho2 * math.sqrt(2.0 * dh)
+
+    if k_override >= 0.0:
+        k = k_override
+    else:
+        k = math.sqrt(max(P1 - P2, 0.0) / max(Pv1 - P2, tiny))
+
+    w = (1.0 / (1.0 + k))
+    return (1-w) * mdot_spi + w * mdot_hem
   
 def mdot_spi_hem_nhne(P1, T1, P2, Cd, Ainj, fluid='N2O', k_override=None):
     # --- Upstream thermo (h1, s1)
@@ -34,17 +64,13 @@ def mdot_spi_hem_nhne(P1, T1, P2, Cd, Ainj, fluid='N2O', k_override=None):
     # --- Upstream liquid density for SPI (Evaluated at P and T for subcooled liquid!)
     rho1 = CP.PropsSI("Dmass", "Q", 0, "T", T1, fluid)
 
-    # --- SPI model
-    dP = max(P1 - P2, 0.0)
-    mdot_spi = Cd * Ainj * math.sqrt(2.0 * rho1 * dP)
-
     # --- Check for Vapor Pressure (Flashing condition)
     Pv1 = CP.PropsSI("P", "T", T1, "Q", 0, fluid)  # Vapor pressure at inlet T
     
     # If vapor pressure is lower than downstream pressure, no flashing occurs.
     if Pv1 <= P2:
-        return mdot_spi
-        
+        k_val = float(k_override) if k_override is not None else -1.0
+        return _mdot_spi_hem_nhne_math(P1, P2, Cd, Ainj, rho1, Pv1, h1, 0.0, 0.0, 0.0, 0.0, 0.0, k_val)
 
     # --- HEM: isentropic to P2 (s2 = s1)
     h2 = CP.PropsSI("Hmass", "P", P2, "Smass", s1, fluid)
@@ -55,34 +81,8 @@ def mdot_spi_hem_nhne(P1, T1, P2, Cd, Ainj, fluid='N2O', k_override=None):
     rhof = CP.PropsSI("Dmass", "P", P2, "Q", 0, fluid)
     rhog = CP.PropsSI("Dmass", "P", P2, "Q", 1, fluid)
 
-    # Exit quality from enthalpy
-    tiny = 1e-12
-    x2 = (h2 - hf) / max(hg - hf, tiny)
-    x2 = clamp(x2, 0.0, 1.0)
-
-    # Homogeneous mixture density at exit
-    if x2 > 0:
-        rho2 = 1.0 / (x2 / rhog + (1.0 - x2) / rhof)
-    else:
-        rho2 = rhof
-
-    # HEM mass flow
-    dh = max(h1 - h2, 0.0)
-    mdot_hem = Cd * Ainj * rho2 * math.sqrt(2.0 * dh)
-
-    # --- Dyre/NHNE k-factor
-    if k_override is not None:
-        k = float(k_override)
-    else:
-        # Dyer parameter
-        k = math.sqrt(max(P1 - P2, 0.0) / (Pv1 - P2))
-
-    # Blend weights
-    w = (1.0 / (1.0 + k))
-
-    mdot_nhne = (1-w) * mdot_spi + w * mdot_hem
-    
-    return mdot_nhne
+    k_val = float(k_override) if k_override is not None else -1.0
+    return _mdot_spi_hem_nhne_math(P1, P2, Cd, Ainj, rho1, Pv1, h1, h2, hf, hg, rhof, rhog, k_val)
 
 ###########################
 
@@ -135,11 +135,25 @@ class Injector_obj:
 
         N_holes = self.numox
 
-        mdot = mdot_vapor_orifice(P1,T1,P2,Cd,N_holes,self.Aox)
+        mdot = mdot_vapor_orifice(P1,T1,P2,Cd,N_holes,self.Aox,self.ox)
 
         return mdot
         
 
+@njit(cache=True)
+def _mdot_vapor_orifice_math(P1, T1, P2, Cd, A, gamma, R_spec, rho1):
+    PR_crit = (2 / (gamma + 1)) ** (gamma / (gamma - 1))
+    Gamma = math.sqrt(gamma) * (2 / (gamma + 1)) ** ((gamma + 1) / (2 * (gamma - 1)))
+
+    if P2 / P1 <= PR_crit:
+        mdot = Cd * A * P1 * Gamma / math.sqrt(R_spec * T1)
+    else:
+        PR = P2 / P1
+        mdot = Cd * A * math.sqrt(
+            2 * rho1 * P1 * (gamma / (gamma - 1)) *
+            (PR**(2/gamma) - PR**((gamma+1)/gamma))
+        )
+    return mdot
 
 def mdot_vapor_orifice(P1, T1, P2, Cd, N_holes, A_inj, fluid='N2O'):
     """
@@ -167,25 +181,7 @@ def mdot_vapor_orifice(P1, T1, P2, Cd, N_holes, A_inj, fluid='N2O'):
     R_spec = CP.PropsSI('gas_constant', fluid) / CP.PropsSI('molar_mass', fluid)
     rho1   = CP.PropsSI('D', 'T|gas', T1, 'P', P1, fluid)
 
-    # Critical pressure ratio
-    PR_crit = (2 / (gamma + 1)) ** (gamma / (gamma - 1))
-
-    # Vandenkerckhove / choked flow factor
-    Gamma = math.sqrt(gamma) * (2 / (gamma + 1)) ** ((gamma + 1) / (2 * (gamma - 1)))
-
-    if P2 / P1 <= PR_crit:
-        # Choked flow
-        mdot = Cd * A * P1 * Gamma / math.sqrt(R_spec * T1)
-
-    else:
-        # Unchoked - isentropic subsonic
-        PR = P2 / P1
-        mdot = Cd * A * math.sqrt(
-            2 * rho1 * P1 * (gamma / (gamma - 1)) *
-            (PR**(2/gamma) - PR**((gamma+1)/gamma))
-        )
-
-    return mdot
+    return _mdot_vapor_orifice_math(P1, T1, P2, Cd, A, gamma, R_spec, rho1)
 
 def nozzle(mdot, gamma, R_spec, Tc, A_t, A_e, P_amb):
     """

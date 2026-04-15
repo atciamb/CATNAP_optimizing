@@ -1,0 +1,105 @@
+# CATNAP Configuration File
+# Coupled Adiabatic Tank and Nozzle Analysis Program
+
+[simulation]
+time = 25              # Total simulation time (seconds)
+num_steps = 300        # Number of timesteps
+
+[propellants]
+oxidizer = "N2O"       # Oxidizer name for CoolProp/CEA
+fuel = "ETHANOL"       # Fuel name for CoolProp/CEA
+
+[initial_conditions]
+tank_mass = 53.3438           # Initial tank mass (kg)
+tank_temperature = 290        # Initial tank temperature (K)
+vapor_mass_fraction = 0.01    # Initial vapor mass fraction (x1)
+chamber_pressure_psi = 340    # Initial chamber pressure (psi)
+chamber_temperature = 170     # Initial chamber temperature (K)
+piston_pressure_drop_psi = 15 # Piston pressure drop (psi)
+
+[mass_flow]
+coolant = 0.81         # Coolant mass flow rate (kg/s)
+oxidizer = 2.548       # Initial oxidizer mass flow rate (kg/s)
+fuel = 0.784           # Initial fuel mass flow rate (kg/s)
+film_cooling = 0.118   # Film cooling mass flow rate (kg/s)
+mass_ratio_target = 3.2
+total_target = 3.40194 # Target total mass flow rate (kg/s)
+
+[coolant]
+init_temperature = 290     # Coolant initial temperature (K)
+init_pressure = 3.7921e6   # Coolant initial pressure (Pa)
+
+[injector]
+# Discharge coefficients
+cd_ox = 0.65
+cd_fuel = 0.55
+cd_film = 0.65
+
+# Injection angles (degrees)
+angle_ox = 30
+angle_fuel = 20
+angle_film = 20
+
+# Orifice dimensions (m)
+area_ox = 2.533e-3
+area_fuel = 1.240e-3
+area_film = 0.480e-3
+
+[nozzle]
+# Diameters in mm
+throat_diameter = 52.77
+exit_diameter = 111.04
+
+# Expansion angle (degrees)
+expansion_angle = 15
+
+# Lengths in inches (converted internally to meters)
+length_nozzle = 4.19
+length_converging1 = 0.367
+length_converging2 = 2.912
+length_chamber = 4.841
+
+# Radii of curvature in inches
+radius_curvature1 = 0.589
+radius_curvature2 = 4.678
+radius_chamber = 2.17
+radius_exit = 2.13
+
+[thermodynamics]
+specific_gas_constant = 359.7  # J/(kg*K)
+specific_heat_ratio = 1.226    # gamma
+combustion_temperature = 2641.5 # K
+ambient_pressure_atm = 0.8     # Ambient pressure (atm fraction)
+
+[regen_cooling]
+wall_thickness = 1.5e-3         # Wall thickness (m)
+channel_floor_height = 1e-3     # Channel floor height (m)
+min_channel_width = 1.5e-3      # Minimum channel width (m)
+throat_radius_curvature = 0.0254 # Throat radius of curvature (m)
+num_channels = 90               # Number of cooling channels
+channel_roughness = 15e-6       # Channel roughness (m)
+num_points_z = 110              # Axial interpolation points
+engine_length = 80              # Estimated engine length
+
+# Analysis parameters
+channelwise_length = 0.3        # Channel length analyzed (m)
+num_points_axial = 5000         # Axial interpolation points
+convergence_epsilon = 1e-3      # Convergence tolerance
+regen_time_start = 0.5          # Start time for regen snapshots (s)
+regen_time_end = 18             # End time for regen snapshots (s)
+regen_time_points = 7           # Number of snapshot times
+
+[materials]
+chamber_conductivity = 350      # Chamber material thermal conductivity W/(m*K)
+
+[visualization]
+plot_contour = true
+contour_lines = 7
+grid_lines = 15
+nozzle_color = "steelblue"
+num_points = 20000
+
+[output]
+engine_name = "Altair"
+dashboard_template = "catnap_dashboard.html"
+dashboard_output = "catnap_results.html"

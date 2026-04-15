@@ -14,12 +14,9 @@ import math
 from math import pi, tan
 from scipy.optimize import brentq
 from scipy.optimize import root
+from numba import njit
 
 from RXPI_CATNAP_Combustion import SolvePC, CombustionPerformance, ChamberTransport, TPRhoStag, Props_obj, Transport_obj
-
-
-
-
 
 
 def RegenGeom(lfmin,wcmin,Rthroat,numchannels,twall,R):
@@ -42,102 +39,71 @@ def RegenGeom(lfmin,wcmin,Rthroat,numchannels,twall,R):
 
 
 
-    
-
-
-
+@njit(cache=True)
+def _dittusb_math(Reynolds, Prantl, k_fluid, Dh):
+    Nusselt = 0.023*(Reynolds**0.8)*(Prantl**0.4)
+    return Nusselt * k_fluid / Dh
 
 def DittusB(z,mdotchannel,T1,P1,Regen_obj):
-    
-    channelheight = Regen_obj.channelheight
-    
-    channelwidth = Regen_obj.channelwidth
-    
+    channelheight1 = Regen_obj.channelheight(z)
+    channelwidth1 = Regen_obj.channelwidth(z)
     fluid = Regen_obj.coolant
     
-    channelheight1 = channelheight(z)
-    
-    channelwidth1 = channelwidth(z)
-    
     mu = CP.PropsSI('viscosity','T',T1,'P',P1,fluid)
-    
     Dh = 4*(channelwidth1*channelheight1)/(2*channelwidth1 + 2*channelheight1)
-    
     Reynolds = Dh*mdotchannel/(channelheight1*channelwidth1*mu)
     
     if Reynolds < 2300:
         raise ValueError('Laminar flow probable!, Re < 2300')
         
     Prantl = CP.PropsSI('Prandtl','T',T1,'P',P1,fluid)
-    
     k_fluid = CP.PropsSI('conductivity','T',T1,'P',P1,fluid)
     
-    Nusselt = 0.023*(Reynolds**0.8)*(Prantl**0.4)
-    
-    hcoolant = Nusselt*k_fluid/Dh
-    
-    return hcoolant
+    return _dittusb_math(Reynolds, Prantl, k_fluid, Dh)
 
+
+@njit(cache=True)
+def _gneilinski_math(Reynolds, Prantl, k_fluid, Dh, epsilon_rough):
+    f = 0.25*((math.log10(epsilon_rough/(3.7*Dh) + 5.74/(Reynolds**0.9)))**(-2))
+    Nusselt = ((f/8)*(Reynolds - 1000)*Prantl)/(1 + 12.7*((f/8)**0.5)*(Prantl**(2/3) - 1))
+    return Nusselt * k_fluid / Dh
 
 def Gneilinski(z,mdotchannel,Regen_obj,T1,P1):
-    
-    channelheight = Regen_obj.channelheight
-    
-    channelwidth = Regen_obj.channelwidth
-    
+    channelheight1 = Regen_obj.channelheight(z)
+    channelwidth1 = Regen_obj.channelwidth(z)
     fluid = Regen_obj.coolant
     
-    epsilon_rough = Regen_obj.epsilon_rough
-    
-    channelheight1 = channelheight(z)
-    
-    channelwidth1 = channelwidth(z)
-    
     mu = CP.PropsSI('viscosity','T',T1,'P',P1,fluid)
-    
     Dh = 4*(channelwidth1*channelheight1)/(2*channelwidth1 + 2*channelheight1)
-    
     Reynolds = Dh*mdotchannel/(channelheight1*channelwidth1*mu)
     
     if Reynolds < 2300:
         raise ValueError('Laminar flow probable!, Re < 2300')
     
     Prantl = CP.PropsSI('Prandtl','T',T1,'P',P1,fluid)
-    
     k_fluid = CP.PropsSI('conductivity','T',T1,'P',P1,fluid)
     
-    f = 0.25*((np.log10(epsilon_rough/(3.7*Dh) + 5.74/(Reynolds**0.9)))**(-2))
-    
-    Nusselt = ((f/8)*(Reynolds - 1000)*Prantl)/(1 + 12.7*((f/8)**0.5)*(Prantl**(2/3) - 1))
-    
-    
-    hcoolant = Nusselt*k_fluid/Dh
-    
-    return hcoolant
+    return _gneilinski_math(Reynolds, Prantl, k_fluid, Dh, Regen_obj.epsilon_rough)
     
 
+@njit(cache=True)
+def _etafin_math(channelheight1, hcoolant, kcond_fin, finthickness):
+    msqr = 2*hcoolant/(kcond_fin*finthickness)
+    m = np.sqrt(msqr)
+    return (np.tanh(m*channelheight1))/(m*channelheight1)
 
 def Etafin(z,hcoolant,Regen_obj):
-    
-    
-    finthickness = Regen_obj.trib
-    
-    kcond_fin = Regen_obj.k_chamber
-    
-    channelheight = Regen_obj.channelheight
-    channelheight1 = channelheight(z)
-    
-    msqr = 2*hcoolant/(kcond_fin*finthickness)
-    
-    m = np.sqrt(msqr)
-    
-    etafin = (np.tanh(m*channelheight1))/(m*channelheight1)
-
-    
-    return etafin
-
+    return _etafin_math(Regen_obj.channelheight(z), hcoolant, Regen_obj.k_chamber, Regen_obj.trib)
 
  
+@njit(cache=True)
+def _bartz_hg_math(M, R_val, Dt, rc, Pc, cstar, mu_, cp_, Pr_, g, T0, Tw):
+    A_ = pi*(R_val**2)
+    At = 0.25*pi*(Dt**2)
+    mach_term = 1.0 + (g - 1.0) / 2.0 * (M**2)
+    sigma = (0.5 * (Tw / T0) * mach_term + 0.5)**(-0.68) * mach_term**(-0.12)
+    return ((0.026 / Dt**0.2) * (mu_**0.2 * cp_ / Pr_**0.6) * (Pc / cstar)**0.8 * (Dt / rc)**0.1 * (At / A_)**0.9 * sigma)
+
 def bartz_hg(z, Mach, R, Dt, rc, Pc, cstar, mu, cp, Pr, gamma,Tcomb,TempsC):
     """
     Computes the hot-gas side heat transfer coefficient using the Bartz correlation.
@@ -177,122 +143,52 @@ def bartz_hg(z, Mach, R, Dt, rc, Pc, cstar, mu, cp, Pr, gamma,Tcomb,TempsC):
         Hot-gas side heat transfer coefficient [W/m²·K]
     
     """
-    
-    M   = Mach(z)
-    g   = gamma(z)
-    mu_ = mu(z)      
-    cp_ = cp(z)  # J/kg-K
-    Pr_ = Pr(z)
-
-    T0 = Tcomb
-
     Tw, _ = TempsC(z,Mach)
-
-    Rad = R(z)
-    
-    A_ = pi*(Rad**2)
-    
-    At = 0.25*pi*(Dt**2)
- 
-    mach_term = 1.0 + (g - 1.0) / 2.0 * (M**2)
- 
-    sigma = (0.5 * (Tw / T0) * mach_term + 0.5)**(-0.68) \
-            * mach_term**(-0.12)
- 
-    h_g = (
-        (0.026 / Dt**0.2)
-        * (mu_**0.2 * cp_ / Pr_**0.6)
-        * (Pc / cstar)**0.8
-        * (Dt / rc)**0.1
-        * (At / A_)**0.9
-        * sigma
-    )
-
-    return h_g
+    return _bartz_hg_math(Mach(z), R(z), Dt, rc, Pc, cstar, mu(z), cp(z), Pr(z), gamma(z), Tcomb, Tw)
 
 
+@njit(cache=True)
+def _resistances_math(rad_inner, twall, k_chamber, dz, trib, numchannels, channelheight1, hg, hc, etafin):
+    Rg = 1/(hg*2*pi*rad_inner*dz)
+    Rwall = np.log((rad_inner + twall)/rad_inner)/(2*pi*k_chamber*dz)
+    Abase = (2*pi*(rad_inner + twall) - numchannels*trib)*dz
+    Atotal = Abase + 2*numchannels*channelheight1*dz
+    etanaught = (1 - ((2*numchannels*channelheight1*dz)/(Atotal))*(1 - etafin))
+    Rc = 1/(etanaught*hc*Atotal)
+    Rtotal = Rg + Rwall + Rc
+    return Rtotal, Rg, Rwall, Rc
 
 def Resistances(z,hc,hg,R,Regen_obj):
-    
-    channelheight = Regen_obj.channelheight
-
-    rad_inner = R(z)
-
-    k_chamber = Regen_obj.k_chamber
-
-    dz = Regen_obj.dz
-
-    twall = Regen_obj.twall
-
-    trib = Regen_obj.trib
-
-    numchannels = Regen_obj.numchannels
-
-    channelheight1 = channelheight(z)
-    
-    Rg = 1/(hg*2*pi*rad_inner*dz)
-    
-    Rwall = np.log((rad_inner + twall)/rad_inner)/(2*pi*k_chamber*dz)
-    
-    etafin = Etafin(z, hc, Regen_obj)
-    
-    Abase = (2*pi*(rad_inner + twall) - numchannels*trib)*dz
-    
-    Atotal = Abase + 2*numchannels*channelheight1*dz
-    
-    etanaught = (1 - ((2*numchannels*channelheight1*dz)/(Atotal))*(1 - etafin))
-    
-    Rc = 1/(etanaught*hc*Atotal)
-    
-    Rtotal = Rg + Rwall + Rc
-    
-    return Rtotal,Rg,Rwall,Rc
+    return _resistances_math(R(z), Regen_obj.twall, Regen_obj.k_chamber, Regen_obj.dz, Regen_obj.trib, Regen_obj.numchannels, Regen_obj.channelheight(z), hg, hc, Etafin(z, hc, Regen_obj))
 
 
+@njit(cache=True)
+def _deltap_math(Dh, rho, u, u2, f, dz):
+    darcydP = -(f/Dh)*(0.5*rho*(u**2))*dz
+    areadP = 0.5*(rho)*(u**2 - u2**2)        
+    return darcydP + areadP
 
 def DeltaP(z,mdotchannel,T1,P1,Regen_obj):
-
-    channelheight = Regen_obj.channelheight
-
-    channelwidth = Regen_obj.channelwidth
-
+    channelheight1 = Regen_obj.channelheight(z)
+    channelheight2 = Regen_obj.channelheight(z + Regen_obj.dz)
+    channelwidth1 = Regen_obj.channelwidth(z)
+    channelwidth2 = Regen_obj.channelwidth(z + Regen_obj.dz)
+    
     fluid = Regen_obj.coolant
-
-    epsilon_rough = Regen_obj.epsilon_rough
-
-    dz = Regen_obj.dz
-    
-    channelheight1 = channelheight(z)
-    channelheight2 = channelheight(z + dz)
-    
-    channelwidth1 = channelwidth(z)
-    channelwidth2 = channelwidth(z + dz)
-    
-
     mu = CP.PropsSI('viscosity','T',T1,'P',P1,fluid)
-    
     Dh = 4*(channelwidth1*channelheight1)/(2*channelwidth1 + 2*channelheight1)
-    
     Reynolds = Dh*mdotchannel/(channelheight1*channelwidth1*mu)
     
     if Reynolds < 2300:
         raise ValueError('Laminar flow probable!, Re < 2300')
     
-    f = 0.25*((np.log10(epsilon_rough/(3.7*Dh) + 5.74/(Reynolds**0.9)))**(-2))
-    
+    f = 0.25*((np.log10(Regen_obj.epsilon_rough/(3.7*Dh) + 5.74/(Reynolds**0.9)))**(-2))
     rho = CP.PropsSI('D','T',T1,'P',P1,fluid)
     
     u = mdotchannel/(rho*channelwidth1*channelheight1)
-    
     u2 = mdotchannel/(rho*channelwidth2*channelheight2)
     
-    darcydP = -(f/Dh)*(0.5*rho*(u**2))*dz
-    
-    areadP = 0.5*(rho)*(u**2 - u2**2)        
-    
-    DeltaP = darcydP + areadP
-    
-    return DeltaP
+    return _deltap_math(Dh, rho, u, u2, f, Regen_obj.dz)
 
 
 
