@@ -14,6 +14,7 @@ import math
 from math import pi, tan
 from scipy.optimize import brentq
 from scipy.optimize import root
+from numba import njit
 
 
 from rocketcea.cea_obj_w_units import CEA_Obj
